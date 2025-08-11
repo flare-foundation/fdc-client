@@ -80,7 +80,7 @@ func New(
 	return Server{srv: srv}
 }
 
-// Registration of routes for the FDC protocol provider
+// Registration of routes for the FDC protocol provider.
 func RegisterFDCProviderRoutes(router restserver.Router, protocolID uint8, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
 	// Prepare service controller
 	controller := newFDCProtocolProviderController(rounds, protocolID)
