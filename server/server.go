@@ -69,11 +69,12 @@ func New(
 	})
 	corsMuxRouter := cors.Handler(muxRouter)
 	srv := &http.Server{
-		Handler: corsMuxRouter,
-		Addr:    serverConfig.Addr,
+		Handler:           corsMuxRouter,
+		Addr:              serverConfig.Addr,
+		ReadHeaderTimeout: 15 * time.Second,
 		// Good practice: enforce timeouts for servers you create -- config?
-		// WriteTimeout: 15 * time.Second,
-		// ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
 	}
 
 	return Server{srv: srv}
