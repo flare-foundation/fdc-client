@@ -3,13 +3,12 @@ package registry
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/flare-foundation/go-flare-common/pkg/contracts/registry"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/events"
 )
 
-func ParseVoterRegisteredEvent(dbLog database.Log) (*registry.RegistryVoterRegistered, error) {
-	filterer, err := registry.NewRegistryFilterer(common.Address{}, nil)
+func ParseVoterRegisteredEvent(dbLog database.Log) (*RegistryVoterRegistered, error) {
+	filterer, err := NewRegistryFilterer(common.Address{}, nil)
 	if err != nil {
 		return nil, err
 	}
