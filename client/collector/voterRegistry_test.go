@@ -37,7 +37,7 @@ var policyLogs = []database.Log{
 	},
 }
 
-func TestBuildSubmitToSignatuer(t *testing.T) {
+func TestBuildSubmitToSignature(t *testing.T) {
 	subToSign, err := collector.BuildSubmitToSigningPolicyAddress(policyLogs)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(subToSign))

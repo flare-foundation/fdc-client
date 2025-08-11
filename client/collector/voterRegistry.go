@@ -9,6 +9,7 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
 
+	"github.com/flare-foundation/fdc-client/client/collector/registry"
 	"github.com/flare-foundation/fdc-client/client/shared"
 
 	"fmt"
@@ -48,7 +49,7 @@ func BuildSubmitToSigningPolicyAddress(registryEvents []database.Log) (map[commo
 	submitToSigning := make(map[common.Address]common.Address)
 
 	for i := range registryEvents {
-		event, err := policy.ParseVoterRegisteredEvent(registryEvents[i])
+		event, err := registry.ParseVoterRegisteredEvent(registryEvents[i])
 		if err != nil {
 			return nil, err
 		}

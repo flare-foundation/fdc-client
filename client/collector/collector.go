@@ -3,7 +3,6 @@ package collector
 import (
 	"context"
 
-	"github.com/flare-foundation/go-flare-common/pkg/contracts/registry"
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/submission"
 
@@ -11,6 +10,8 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
+
+	"github.com/flare-foundation/fdc-client/client/collector/registry"
 
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/shared"
