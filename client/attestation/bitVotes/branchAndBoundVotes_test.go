@@ -17,7 +17,7 @@ func TestBranchAndBoundProvidersFix(t *testing.T) {
 	weightedBitVotes := make([]*bitvotes.WeightedBitVote, numVoters)
 
 	totalWeight := uint16(0)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		var bitVote *bitvotes.WeightedBitVote
 
 		if 0.30*float64(numVoters) > float64(j) {

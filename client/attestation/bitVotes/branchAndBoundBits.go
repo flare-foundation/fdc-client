@@ -310,15 +310,15 @@ func prepareDataForBranchWithOne(processInfo *ProcessInfo, currentStatus *Shared
 // If result1 (branch in which the bit in place branch is included) is greater, result1 with updated bits is returned.
 // Otherwise, result0 without the bit it the branch place is returned.
 func joinResultsAttestations(result0, result1 *branchAndBoundPartialSolution, branch int) *branchAndBoundPartialSolution {
-	if result0 == nil && result1 == nil {
+	switch {
+	case result0 == nil && result1 == nil:
 		return nil
-	} else if result0 != nil && result1 == nil {
+	case result1 == nil && result0 != nil:
 		return result0
-	} else if result0 == nil || result0.Value.Cmp(result1.Value) == -1 {
+	case result0 == nil || result0.Value.Cmp(result1.Value) == -1: // result1.Value > result0.Value
 		result1.Bits[branch] = true
-
 		return result1
-	} else {
+	default: // result1.Value <= result0.Value
 		return result0
 	}
 }

@@ -65,12 +65,12 @@ func TestResponse(t *testing.T) {
 		abi, err := config.ArgumentsFromABI(abiFile)
 		require.NoError(t, err)
 
-		//isStaticType
+		// isStaticType
 		isStaticType, err := attestation.IsStaticType(resp)
 		require.NoError(t, err)
 		require.Equal(t, test.isStaticType, isStaticType, fmt.Sprintf("error isStaticError in test %d", i))
 
-		//MIC
+		// MIC
 		mic, err := resp.ComputeMIC(&abi)
 		require.NoError(t, err)
 		expectedMic, err := hex.DecodeString(test.mic)

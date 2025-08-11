@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const USER_FILE = "../../tests/configs/testConfig.toml" //relative to test
+const USER_FILE = "../../tests/configs/testConfig.toml" // relative to test
 
 var policyLog = database.Log{
 	Address:         "32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC",

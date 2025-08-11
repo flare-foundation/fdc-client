@@ -33,13 +33,13 @@ type Round struct {
 	merkleTree                   merkle.Tree
 }
 
-// New returns a pointer to a new Round with ID and voterSet.
-func New(ID uint32, voterSet *voters.Set) *Round {
+// New returns a pointer to a new Round with id and voterSet.
+func New(id uint32, voterSet *voters.Set) *Round {
 	Status := new(attestation.RoundStatusMutex)
 	Status.Value = attestation.PreConsensus
 
 	return &Round{
-		ID:                           ID,
+		ID:                           id,
 		Status:                       Status,
 		voterSet:                     voterSet,
 		attestationMap:               make(map[common.Hash]*attestation.Attestation),
@@ -207,7 +207,7 @@ func (r *Round) ProcessBitVote(message payload.Message) error {
 		return fmt.Errorf("bitVector too long")
 	}
 
-	signingAddress, exists := r.voterSet.SubmitToSigningAddress[message.From] //message.From = submit address
+	signingAddress, exists := r.voterSet.SubmitToSigningAddress[message.From] // message.From = submit address
 	if !exists {
 		return fmt.Errorf("no signing address")
 	}

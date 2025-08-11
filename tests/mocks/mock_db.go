@@ -176,7 +176,7 @@ func newTestLog() (*database.Log, error) {
 	return &database.Log{
 		Data:   hex.EncodeToString(eventData),
 		Topic0: hex.EncodeToString(event.ID[:]),
-		Topic1: hex.EncodeToString(topic1[:]),
+		Topic1: hex.EncodeToString(topic1),
 		Topic2: "NULL",
 		Topic3: "NULL",
 	}, nil

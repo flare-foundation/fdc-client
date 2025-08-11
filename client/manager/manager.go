@@ -237,7 +237,7 @@ func VotersDataCheck(data shared.VotersData) error {
 
 // retryUnsuccessfulChosen adds the requests that are without successful response but were chosen by the consensus bitVote to the priority verifier queues.
 func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
-	count := 0 //only for logging
+	count := 0 // only for logging
 
 	for i := range round.Attestations {
 		if round.Attestations[i].Consensus && round.Attestations[i].Status != attestation.Success {

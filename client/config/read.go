@@ -34,7 +34,7 @@ func ReadUserRaw(filePath string) (UserRaw, error) {
 }
 
 func ReadSystem(directory, chain string, protocolID uint8) (System, error) {
-	chain = chain + ".toml"
+	chain += ".toml"
 	protocolStr := strconv.FormatUint(uint64(protocolID), 10)
 	filePath := path.Join(directory, protocolStr, chain)
 

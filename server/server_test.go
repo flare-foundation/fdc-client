@@ -88,7 +88,7 @@ func TestServer(t *testing.T) {
 
 	round.ConsensusBitVote = bitVote
 	round.ConsensusCalculationFinished = true
-	//Wait for the server to be ready.
+	// Wait for the server to be ready.
 	u := url.URL{Scheme: "http", Host: "localhost:8080", Path: "/health"}
 	healthURL := u.String()
 

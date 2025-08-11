@@ -7,7 +7,7 @@ import (
 const (
 	defaultT0                 = 1658429955 // SGB and Coston
 	defaultT0RewardDelay      = 0
-	defaultRewardEpochLength  = 240 //Coston
+	defaultRewardEpochLength  = 240 // Coston
 	defaultCollectDurationSec = 90
 	defaultChooseDurationSec  = 45
 )

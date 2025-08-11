@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const USER_FILE = "../../tests/configs/testConfig.toml" //relative to test
+const USER_FILE = "../../tests/configs/testConfig.toml" // relative to test
 
 func TestBitVoteFromAttestationsEmpty(t *testing.T) {
 	bitVote, err := attestation.BitVoteFromAttestations([]*attestation.Attestation{})

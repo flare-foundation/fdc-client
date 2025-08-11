@@ -103,7 +103,7 @@ func TestBranchAndBoundFix(t *testing.T) {
 	weightedBitvotes := make([]*bitvotes.AggregatedVote, numVoters)
 	totalWeight := uint16(0)
 
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		var bitVote *bitvotes.AggregatedVote
 
 		if 0.30*float64(numVoters) > float64(j) {

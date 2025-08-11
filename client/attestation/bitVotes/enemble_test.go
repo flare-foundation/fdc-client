@@ -67,7 +67,7 @@ func TestEnsembleFixed(t *testing.T) {
 	weightedBitvotes := make([]*bitvotes.WeightedBitVote, numVoters)
 
 	totalWeight := uint16(0)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		var bitVote *bitvotes.WeightedBitVote
 		if 0.30*float64(numVoters) > float64(j) {
 			bitVote = setBitVoteFromPositions(numAttestations, []int{0, 1, 2, 3, 4})
@@ -97,7 +97,7 @@ func TestEnsembleFixed(t *testing.T) {
 	require.Equal(t, bitvotes.Value{big.NewInt(2 * 71), big.NewInt(2 * 71)}, solution.Value)
 
 	fmt.Println(solution.Bits)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		if 0.30*float64(numVoters) > float64(j) {
 			require.Contains(t, solution.Votes, j)
 		} else if 0.61*float64(numVoters) > float64(j) {

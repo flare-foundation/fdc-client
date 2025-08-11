@@ -157,13 +157,18 @@ func (a *Attestation) Discard(ctx context.Context) bool {
 	if a.Status == Success {
 		logger.Debugf("discarding already confirmed request in round %d", a.RoundID)
 		return true
-	} else if a.RoundStatus.Value == Done {
+	}
+
+	if a.RoundStatus.Value == Done {
 		logger.Debugf("discarding request in finished round %d", a.RoundID)
 		return true
-	} else if a.RoundStatus.Value == Consensus && !a.Consensus {
+	}
+
+	if a.RoundStatus.Value == Consensus && !a.Consensus {
 		logger.Debugf("discarding unselected request in round %d", a.RoundID)
 		return true
 	}
+
 	return false
 }
 
