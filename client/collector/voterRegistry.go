@@ -18,7 +18,11 @@ import (
 	"gorm.io/gorm"
 )
 
-const breakingEpoch = 4506
+const breakingEpochCoston = 4506
+const (
+	oldRegistryCoston = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
+	newRegistryCoston = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
+)
 
 type VoterRegisteredParams struct {
 	Address       common.Address
@@ -62,7 +66,7 @@ func BuildSubmitToSigningPolicyAddressNew(registryEvents []database.Log) (map[co
 	return submitToSigning, nil
 }
 
-func BuildSubmitToSigningPolicyAddress(registryEvents []database.Log) (map[common.Address]common.Address, error) {
+func BuildSubmitToSigningPolicyAddressOld(registryEvents []database.Log) (map[common.Address]common.Address, error) {
 	submitToSigning := make(map[common.Address]common.Address)
 
 	for i := range registryEvents {
@@ -86,13 +90,13 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 
 	var submitToSigning map[common.Address]common.Address
 
-	if rewardEpochID >= breakingEpoch {
-		submitToSigning, err = BuildSubmitToSigningPolicyAddressNew(logs)
+	if registryContractAddress == common.HexToAddress(oldRegistryCoston) {
+		submitToSigning, err = BuildSubmitToSigningPolicyAddressOld(logs)
 		if err != nil {
 			return nil, fmt.Errorf("error building submitToSigning map: %s", err)
 		}
 	} else {
-		submitToSigning, err = BuildSubmitToSigningPolicyAddress(logs)
+		submitToSigning, err = BuildSubmitToSigningPolicyAddressNew(logs)
 		if err != nil {
 			return nil, fmt.Errorf("error building submitToSigning map: %s", err)
 		}
@@ -115,8 +119,8 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 
 	rewardEpochID := data.RewardEpochId.Uint64()
 
-	if rewardEpochID >= breakingEpoch {
-		registryContractAddress = common.HexToAddress("0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3")
+	if rewardEpochID <= breakingEpochCoston && registryContractAddress == common.HexToAddress(newRegistryCoston) {
+		registryContractAddress = common.HexToAddress(oldRegistryCoston)
 	}
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
