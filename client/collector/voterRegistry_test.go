@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// the signatures and public keys in the logs are not valid!
 var policyLogs = []database.Log{
 	{
 		Address:         "D4Fc541236927E2EAf8F27606bD7309C1Fc2cbee",
@@ -31,14 +32,14 @@ var policyLogs = []database.Log{
 		Topic2:          "0000000000000000000000000000000000000000000000000000000000000001",
 		Topic3:          "0000000000000000000000004d221261a498c83686948d4c7ce5ac397226e731",
 		TransactionHash: "9d34a0fe2ca13441e0d8069fa99ba35181b351798a12cec01ad14a874db4150d",
-		LogIndex:        3,
+		LogIndex:        4,
 		Timestamp:       1718191903,
 		BlockNumber:     11,
 	},
 }
 
 func TestBuildSubmitToSignature(t *testing.T) {
-	subToSign, err := collector.BuildSubmitToSigningPolicyAddress(policyLogs)
+	subToSign, err := collector.BuildSubmitToSigningPolicyAddressNew(policyLogs)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(subToSign))
 }
