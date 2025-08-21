@@ -2,7 +2,7 @@
 submit_contract = "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f"
 relay_contract = "0x92a6E1127262106611e1e129BB64B6D8654273F7"
 fdc_contract = "0x1c78A073E3BD2aCa4cc327d55FB0cD4f0549B55b"
-voter_registry_contract = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
+voter_registry_contract = "0xB4B93a3A3ADa93a574E6efeb5f295bf882934cB6"
 
 [timing]
 t0 = 1658429955
