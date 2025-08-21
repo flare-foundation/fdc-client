@@ -39,6 +39,10 @@ func fetchVoterRegisteredEventsForRewardEpoch(ctx context.Context, db *gorm.DB, 
 
 	epochIDBig := new(big.Int).SetUint64(params.RewardEpochID)
 
+	if params.Address == common.HexToAddress(oldRegistryCoston) {
+		voterRegisteredEventSel = common.HexToHash("0x824bc2cc10bfe21ead60b8c8a90716eb325b9335aa73eaede799abf38fce062c")
+	}
+
 	epochID := common.BigToHash(epochIDBig)
 	err := db.WithContext(ctx).Where(
 		"address = ? AND topic0 = ? AND topic2 = ?",
