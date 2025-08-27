@@ -164,7 +164,7 @@ abi_path = "configs/abis/EVMTransaction.json"
 [types.EVMTransaction.Sources.testETH]
 url = ""
 api_key = ""
-lut_limit = "18446744073709551615"
+lut_limit = "26400000"
 queue = "eth"
 
 ##SGB
