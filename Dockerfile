@@ -1,5 +1,5 @@
 # build executable
-FROM golang:1.24.4 AS builder
+FROM golang:1.24-trixie@sha256:2fdfc9eab462f0367a2234d6de19ae8d43e7980928d170392feaa103c73214e9 AS builder
 
 WORKDIR /build
 
@@ -13,7 +13,7 @@ COPY . .
 # Build the applications
 RUN go build -o /app/fdc-client main/main.go
 
-FROM debian:latest AS execution
+FROM debian:trixie@sha256:fd8f5a1df07b5195613e4b9a0b6a947d3772a151b81975db27d47f093f60c6e6 AS execution
 
 WORKDIR /app
 
