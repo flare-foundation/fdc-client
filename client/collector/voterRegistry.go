@@ -20,8 +20,12 @@ import (
 
 const breakingEpochCoston = 4506
 const (
-	oldRegistryCoston = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
 	newRegistryCoston = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
+
+	oldRegistryCoston   = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
+	oldRegistrySongbird = "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D"
+	oldRegistryCoston2  = "0xc6E40401395DCc648bC4bBb38fE4552423cD9BAC"
+	oldRegistryFlare    = "0x2580101692366e2f331e891180d9ffdF861Fce83"
 )
 
 type VoterRegisteredParams struct {
@@ -39,7 +43,11 @@ func fetchVoterRegisteredEventsForRewardEpoch(ctx context.Context, db *gorm.DB, 
 
 	epochIDBig := new(big.Int).SetUint64(params.RewardEpochID)
 
-	if params.Address == common.HexToAddress(oldRegistryCoston) {
+	switch params.Address {
+	case common.HexToAddress(oldRegistryCoston),
+		common.HexToAddress(oldRegistrySongbird),
+		common.HexToAddress(oldRegistryCoston2),
+		common.HexToAddress(oldRegistryFlare):
 		voterRegisteredEventSel = common.HexToHash("0x824bc2cc10bfe21ead60b8c8a90716eb325b9335aa73eaede799abf38fce062c")
 	}
 
@@ -94,15 +102,16 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 
 	var submitToSigning map[common.Address]common.Address
 
-	if registryContractAddress == common.HexToAddress(oldRegistryCoston) {
+	switch registryContractAddress {
+	case common.HexToAddress(oldRegistryCoston), common.HexToAddress(oldRegistrySongbird), common.HexToAddress(oldRegistryCoston2), common.HexToAddress(oldRegistryFlare):
 		submitToSigning, err = BuildSubmitToSigningPolicyAddressOld(logs)
 		if err != nil {
-			return nil, fmt.Errorf("error building submitToSigning map: %s", err)
+			return nil, fmt.Errorf("error old building submitToSigning map: %s", err)
 		}
-	} else {
+	default:
 		submitToSigning, err = BuildSubmitToSigningPolicyAddressNew(logs)
 		if err != nil {
-			return nil, fmt.Errorf("error building submitToSigning map: %s", err)
+			return nil, fmt.Errorf("error new building submitToSigning map: %s", err)
 		}
 	}
 
