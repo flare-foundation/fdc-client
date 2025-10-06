@@ -44,7 +44,8 @@ func fetchVoterRegisteredEventsForRewardEpoch(ctx context.Context, db *gorm.DB, 
 	epochIDBig := new(big.Int).SetUint64(params.RewardEpochID)
 
 	switch params.Address {
-	case common.HexToAddress(oldRegistryCoston),
+	case
+		common.HexToAddress(oldRegistryCoston),
 		common.HexToAddress(oldRegistrySongbird),
 		common.HexToAddress(oldRegistryCoston2),
 		common.HexToAddress(oldRegistryFlare):
@@ -103,7 +104,11 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 	var submitToSigning map[common.Address]common.Address
 
 	switch registryContractAddress {
-	case common.HexToAddress(oldRegistryCoston), common.HexToAddress(oldRegistrySongbird), common.HexToAddress(oldRegistryCoston2), common.HexToAddress(oldRegistryFlare):
+	case
+		common.HexToAddress(oldRegistryCoston),
+		common.HexToAddress(oldRegistrySongbird),
+		common.HexToAddress(oldRegistryCoston2),
+		common.HexToAddress(oldRegistryFlare):
 		submitToSigning, err = BuildSubmitToSigningPolicyAddressOld(logs)
 		if err != nil {
 			return nil, fmt.Errorf("error old building submitToSigning map: %s", err)
