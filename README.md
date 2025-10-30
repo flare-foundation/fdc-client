@@ -17,7 +17,7 @@ The client has no direct interactions with the Flare blockchain/node. The data i
 
 ## Protocol
 
-See [whitepaper](https://flare.network/wp-content/uploads/FDC_WP_171024_02.pdf).
+See [whitepaper](https://dev.flare.network/pdf/whitepapers/20240224-FlareDataConnector.pdf).
 
 ## Server endpoints
 
