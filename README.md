@@ -19,13 +19,41 @@ The client has no direct interactions with the Flare blockchain/node. The data i
 
 See [whitepaper](https://flare.network/wp-content/uploads/FDC_WP_171024_02.pdf).
 
-## Tests
+## Server endpoints
 
-To run all tests locally and generate a coverage report:
+| Method | Endpoint   | Description                                            |
+| ------ | ---------- | ------------------------------------------------------ |
+| GET    | `/health`  | Returns 200 if healthy.                                |
+|        | `/api-doc` | Swagger. The endpoint is [configurable](#rest-server). |
 
-```
-$ ./gencover.sh
-```
+### FSP
+
+Endpoints for Flare Systems Protocol clint.
+
+All endpoints return a json with fields:
+
+- status - string ("OK", "EMPTY", or "RETRY")
+- data - 0x prefixed hex string
+- additional data - 0x prefixed hex string
+
+The path component /fsp is [configurable](#rest-server).
+
+| Method | Endpoint                                                | Description                                                                                                                                                                                                      |
+| ------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/fsp/submit1/{votingRoundID}/{submitAddress}`          | Returns empty data ("0x") with status "OK". Unless called before the start of the voting round.                                                                                                                  |
+| GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting. round.                                                                                             |
+| GET    | `/fsp/submitSignatures/{votingRoundID}/{submitAddress}` | Returns message for voting as data and consensus bit-vote as additional data. If data has not been assembled yet no data with status "RETRY" is returned. If data cannot be assembled status "EMPTY is returned. |
+
+## DA
+
+Endpoints for Data Availability layer.
+
+| Method | Endpoint                              | Description |
+| ------ | ------------------------------------- | ----------- |
+| GET    | `/da/getRequests/{votingRoundID}`     |             |
+| GET    | `/da/getAttestations/{votingRoundID}` |             |
+
+The path component /da is [configurable](#rest-server)
 
 ## Configurations
 
@@ -70,7 +98,6 @@ da_sub_router_title = "DA endpoints"
 da_sub_router_path = "/da"
 version = "0.0.0"
 swagger_path = "/api-doc"
-
 ```
 
 ### Attestation Types
@@ -135,7 +162,6 @@ submit_contract = "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f"
 relay_contract = "0x32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC"
 fdc_contract = "0xCf6798810Bc8C0B803121405Fee2A5a9cc0CA5E5"
 voter_registry_contract = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
-
 ```
 
 The timestamp of the start of the first reward epoch (T0) and length of reward epoch have to be specified.
