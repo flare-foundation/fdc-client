@@ -40,7 +40,7 @@ type WeightedBitVote struct {
 	BitVote BitVote
 }
 
-// EncodeBitVote encodes BitVote
+// EncodeBitVote encodes BitVote.
 func (b BitVote) EncodeBitVote() []byte {
 	encoding := make([]byte, 2)
 	binary.BigEndian.PutUint16(encoding, b.Length)
@@ -57,7 +57,7 @@ func (b BitVote) EncodeBitVoteHex() string {
 	return str
 }
 
-// DecodeBitVoteBytes decodes bytes encoded BitVote
+// DecodeBitVoteBytes decodes bytes encoded BitVote.
 func DecodeBitVoteBytes(bitVoteByte []byte) (BitVote, error) {
 	if len(bitVoteByte) < 2 {
 		return BitVote{}, errors.New("bitVote too short")
@@ -68,11 +68,11 @@ func DecodeBitVoteBytes(bitVoteByte []byte) (BitVote, error) {
 
 	length := binary.BigEndian.Uint16(lengthBytes)
 
-	bigBitVector := new(big.Int).SetBytes(bitVector)
+	bigBV := new(big.Int).SetBytes(bitVector)
 
-	if bigBitVector.BitLen() > int(length) {
+	if bigBV.BitLen() > int(length) {
 		return BitVote{}, errors.New("bad bitvote")
 	}
 
-	return BitVote{length, bigBitVector}, nil
+	return BitVote{length, bigBV}, nil
 }

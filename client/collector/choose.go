@@ -41,8 +41,8 @@ func BitVoteListener(
 		params := database.TxParams{
 			ToAddress:   submitContractAddress,
 			FunctionSel: funcSel,
-			From:        int64(timing.ChooseStartTimestamp(roundID)) - 1, // -1 to include first second of the choose phase and its bitVotes
-			To:          int64(timing.ChooseEndTimestamp(roundID)) - 1,   // bitVotes that happen on the deadline are not considered valid
+			From:        int64(timing.ChooseStartTS(roundID)) - 1, // -1 to include first second of the choose phase and its bitVotes
+			To:          int64(timing.ChooseEndTS(roundID)) - 1,   // bitVotes that happen on the deadline are not considered valid
 		}
 
 		txs, err := database.FetchTransactionsByAddressAndSelectorTimestamp(

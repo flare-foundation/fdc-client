@@ -273,20 +273,20 @@ func FilterAndAggregate(bitVotes []*WeightedBitVote, fees []*big.Int, totalWeigh
 	return aggregatedVotes, aggregatedBits, filterResults
 }
 
-func AssembleSolution(filterResults *FilterResults, filteredSolution *ConsensusSolution, numberOfAttestations uint16) BitVote {
-	consensusBitVote := big.NewInt(0)
+func AssembleSolution(filterResults *FilterResults, filteredSolution *ConsensusSolution, numOfAttestations uint16) BitVote {
+	consensusBV := big.NewInt(0)
 
 	for _, i := range filterResults.AlwaysInBits {
-		consensusBitVote.SetBit(consensusBitVote, i, 1)
+		consensusBV.SetBit(consensusBV, i, 1)
 	}
 
 	for j := range filteredSolution.Bits {
 		indexes := filteredSolution.Bits[j].Indexes
 
 		for _, k := range indexes {
-			consensusBitVote.SetBit(consensusBitVote, k, 1)
+			consensusBV.SetBit(consensusBV, k, 1)
 		}
 	}
 
-	return BitVote{BitVector: consensusBitVote, Length: numberOfAttestations}
+	return BitVote{BitVector: consensusBV, Length: numOfAttestations}
 }

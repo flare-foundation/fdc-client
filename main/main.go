@@ -36,6 +36,7 @@ func main() {
 	if err != nil {
 		logger.Panicf("cannot set timing: %s", err)
 	}
+
 	attestationTypeConfig, err := config.ParseAttestationTypes(userConfigRaw.AttestationTypeConfig)
 	if err != nil {
 		logger.Panicf("att types config: %s", err)

@@ -45,7 +45,7 @@ func MockResponseForTest(t *testing.T, writer http.ResponseWriter, request *http
 	var requestStruct attestation.ABIEncodedRequestBody
 	err = json.Unmarshal(body, &requestStruct)
 	require.NoError(t, err)
-	require.Equal(t, "0x"+testLog.Data[192:len(testLog.Data)-1], requestStruct.ABIEncodedRequest[:len(requestStruct.ABIEncodedRequest)-1]) // todo: is it expected to be trimmed?
+	require.Equal(t, "0x"+testLog.Data[192:len(testLog.Data)-1], requestStruct.ABIEncodedRequest[:len(requestStruct.ABIEncodedRequest)-1])
 
 	responseStruct := attestation.ABIEncodedResponseBody{Status: "VALID", ABIEncodedResponse: response}
 	responseBytes, err := json.Marshal(responseStruct)

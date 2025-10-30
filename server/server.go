@@ -17,6 +17,8 @@ import (
 	"github.com/rs/cors"
 )
 
+const shutdownTimeout = 5 * time.Second
+
 type Server struct {
 	srv *http.Server
 }
@@ -51,13 +53,13 @@ func New(
 	// create FSP sub router
 	fspSubRouter := router.WithPrefix(serverConfig.FSPSubpath, serverConfig.FSPTitle)
 	// Register routes for FSP
-	RegisterFDCProviderRoutes(fspSubRouter, protocolID, rounds, []string{serverConfig.APIKeyName})
+	registerFDCProviderRoutes(fspSubRouter, protocolID, rounds, []string{serverConfig.APIKeyName})
 	fspSubRouter.AddMiddleware(keyMiddleware.Middleware)
 
 	// create DA sub router
 	daSubRouter := router.WithPrefix(serverConfig.DAPSubpath, serverConfig.DATitle)
 	// Register routes for DA
-	RegisterDARoutes(daSubRouter, rounds, []string{serverConfig.APIKeyName})
+	registerDARoutes(daSubRouter, rounds, []string{serverConfig.APIKeyName})
 	daSubRouter.AddMiddleware(keyMiddleware.Middleware)
 
 	// Register routes
@@ -80,8 +82,28 @@ func New(
 	return Server{srv: srv}
 }
 
-// Registration of routes for the FDC protocol provider.
-func RegisterFDCProviderRoutes(router restserver.Router, protocolID uint8, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
+func (s *Server) Run(ctx context.Context) {
+	logger.Infof("Starting server on %s", s.srv.Addr)
+
+	err := s.srv.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		logger.Panicf("Server error: %v", err)
+	}
+}
+
+func (s *Server) Shutdown() {
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+
+	if err := s.srv.Shutdown(ctx); err != nil {
+		logger.Error("Server shutdown failed:", err)
+	} else {
+		logger.Info("Server gracefully stopped")
+	}
+}
+
+// registerFDCProviderRoutes registers routes for the FDC protocol provider.
+func registerFDCProviderRoutes(router restserver.Router, protocolID uint8, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
 	// Prepare service controller
 	controller := newFDCProtocolProviderController(rounds, protocolID)
 	paramMap := map[string]string{"votingRoundID": "Voting round ID", "submitAddress": "Submit address"}
@@ -96,8 +118,8 @@ func RegisterFDCProviderRoutes(router restserver.Router, protocolID uint8, round
 	router.AddRoute("/submitSignatures/{votingRoundID}/{submitAddress}", submitSignaturesHandler, "SubmitSignatures")
 }
 
-// Registration of routes for the DA layer WIP
-func RegisterDARoutes(router restserver.Router, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
+// registerDARoutes registers routes for DA layer.
+func registerDARoutes(router restserver.Router, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
 	// Prepare service controller
 	controller := DAController{Rounds: rounds}
 	paramMap := map[string]string{"votingRoundID": "Voting round ID"}
@@ -107,26 +129,4 @@ func RegisterDARoutes(router restserver.Router, rounds *storage.Cyclic[uint32, *
 
 	getAttestations := restserver.GeneralRouteHandler(controller.getAttestationController, http.MethodGet, http.StatusOK, paramMap, nil, nil, AttestationResponse{}, securities)
 	router.AddRoute("/getAttestations/{votingRoundID}", getAttestations, "GetAttestations")
-}
-
-func (s *Server) Run(ctx context.Context) {
-	logger.Infof("Starting server on %s", s.srv.Addr)
-
-	err := s.srv.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		logger.Panicf("Server error: %v", err)
-	}
-}
-
-var shutdownTimeout = 5 * time.Second
-
-func (s *Server) Shutdown() {
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
-
-	if err := s.srv.Shutdown(ctx); err != nil {
-		logger.Error("Server shutdown failed:", err)
-	} else {
-		logger.Info("Server gracefully stopped")
-	}
 }

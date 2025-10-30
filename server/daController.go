@@ -35,26 +35,24 @@ func validateRoundIDParam(params map[string]string) (uint32, error) {
 
 	votingRoundID, err := strconv.ParseUint(votingRoundIDStr, 10, 32)
 	if err != nil {
-		return 0, errors.New("votingRound param is not a 32 bit number")
+		return 0, errors.New("votingRound param is not a 32 bit decimal number")
 	}
 
 	return uint32(votingRoundID), nil
 }
 
-func (controller *DAController) getRequestController(
+func (c *DAController) getRequestController(
 	params map[string]string,
-	_ interface{},
-	_ interface{},
+	_ any,
+	_ any,
 ) (RequestsResponse, *restserver.ErrorHandler) {
 	votingRoundID, err := validateRoundIDParam(params)
-
 	if err != nil {
 		logger.Error(err)
 		return RequestsResponse{}, restserver.BadParamsErrorHandler(err)
 	}
 
-	requests, exists := controller.GetRequests(votingRoundID)
-
+	requests, exists := c.GetRequests(votingRoundID)
 	if !exists {
 		return RequestsResponse{Status: NotAvailable}, nil
 	}
@@ -62,19 +60,18 @@ func (controller *DAController) getRequestController(
 	return RequestsResponse{Status: Ok, Requests: requests}, nil
 }
 
-func (controller *DAController) getAttestationController(
+func (c *DAController) getAttestationController(
 	params map[string]string,
-	_ interface{},
-	_ interface{}) (AttestationResponse, *restserver.ErrorHandler) {
+	_ any,
+	_ any,
+) (AttestationResponse, *restserver.ErrorHandler) {
 	votingRoundID, err := validateRoundIDParam(params)
-
 	if err != nil {
 		logger.Error(err)
 		return AttestationResponse{}, restserver.BadParamsErrorHandler(err)
 	}
 
-	attestations, exists := controller.GetAttestations(votingRoundID)
-
+	attestations, exists := c.GetAttestations(votingRoundID)
 	if !exists {
 		return AttestationResponse{Status: NotAvailable}, nil
 	}

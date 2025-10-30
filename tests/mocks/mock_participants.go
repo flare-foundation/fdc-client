@@ -48,12 +48,12 @@ func MockParticipants(systemConfig *config.System, participants []string, client
 	for {
 		now := time.Now()
 
-		round, err := timing.RoundIDForTimestamp(uint64(now.Unix()))
+		round, err := timing.RoundIDForTS(uint64(now.Unix()))
 		if err != nil {
 			logger.Fatal("Error: %s", err)
 		}
 
-		startTime := timing.RoundStartTime(round + 1)
+		startTime := timing.RoundStartTS(round + 1)
 
 		timer := time.NewTimer(time.Until(time.Unix(int64(startTime+2), 0)))
 		<-timer.C
@@ -149,7 +149,7 @@ func sendBitvote(round uint32, client *ethclient.Client, toAddress, fromAddress 
 	dataBytes := append(collector.Submit2FuncSel[:], 200)
 
 	votingRound := make([]byte, 4)
-	binary.BigEndian.PutUint32(votingRound, round) // todo
+	binary.BigEndian.PutUint32(votingRound, round)
 	dataBytes = append(dataBytes, votingRound...)
 
 	length := make([]byte, 2)

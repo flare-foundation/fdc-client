@@ -35,6 +35,7 @@ The configurations are set in `userConfig.toml` file in `configs` folder.
 # options are: "coston", "songbird", "coston2", "flare"
 chain = <chainName>
 
+# currently only 200
 protocol_id = <protocolID>
 ```
 

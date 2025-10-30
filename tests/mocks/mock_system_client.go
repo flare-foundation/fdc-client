@@ -27,7 +27,7 @@ func MockSystemClient(systemConfig *config.System, userConfig *config.UserRaw, c
 	for {
 		now := time.Now()
 
-		round, err := timing.RoundIDForTimestamp(uint64(now.Unix()))
+		round, err := timing.RoundIDForTS(uint64(now.Unix()))
 		if err != nil {
 			logger.Fatal("Error: %s", err)
 		}
@@ -35,14 +35,14 @@ func MockSystemClient(systemConfig *config.System, userConfig *config.UserRaw, c
 		go SystemClientIteration(userConfig, submitAddress, submitSigAddress, round)
 		go SystemClientIteration(userConfig, submitAddress, submitSigAddress, round+1)
 
-		submit1Time := timing.ChooseStartTimestamp(round + 2)
+		submit1Time := timing.ChooseStartTS(round + 2)
 		timer := time.NewTimer(time.Until(time.Unix(int64(submit1Time-5), 0)))
 		<-timer.C
 	}
 }
 
 func SystemClientIteration(userConfig *config.UserRaw, submitAddress, submitSigAddress common.Address, round uint32) {
-	submit1Time := timing.ChooseStartTimestamp(round)
+	submit1Time := timing.ChooseStartTS(round)
 	submit2Time := submit1Time + timing.Chain.ChooseDurationSec
 	submitSignature := submit2Time + 45
 

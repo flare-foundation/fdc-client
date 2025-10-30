@@ -107,7 +107,7 @@ func TestBitVoteListener(t *testing.T) {
 
 	input := hex.EncodeToString(funcSel[:]) + msg[2:]
 
-	timestamp := (timing.ChooseStartTimestamp(roundID) + timing.ChooseEndTimestamp(roundID)) / 2
+	timestamp := (timing.ChooseStartTS(roundID) + timing.ChooseEndTS(roundID)) / 2
 
 	tx := database.Transaction{
 		FromAddress: common.HexToAddress("11").String(),

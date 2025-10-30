@@ -10,7 +10,7 @@ import (
 )
 
 func TestRoundIDForTimestamp(t *testing.T) {
-	_, err := timing.RoundIDForTimestamp(0)
+	_, err := timing.RoundIDForTS(0)
 
 	require.Error(t, err)
 
@@ -29,7 +29,7 @@ func TestRoundIDForTimestamp(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		roundID, err := timing.RoundIDForTimestamp(test.timestamp)
+		roundID, err := timing.RoundIDForTS(test.timestamp)
 		require.NoError(t, err, fmt.Sprintf("unexpected error in test %d: %s", i, err))
 		require.Equal(t, test.roundID, roundID, fmt.Sprintf("wrong round in test %d", i))
 	}
@@ -57,13 +57,13 @@ func TestTimesForRounds(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		timestampStart := timing.RoundStartTime(test.roundID)
+		timestampStart := timing.RoundStartTS(test.roundID)
 		require.Equal(t, test.timestampStart, timestampStart, fmt.Sprintf("wrong timestampStart in test %d", i))
 
-		timestampChoose := timing.ChooseStartTimestamp(test.roundID)
+		timestampChoose := timing.ChooseStartTS(test.roundID)
 		require.Equal(t, test.timestampChoose, timestampChoose, fmt.Sprintf("wrong timestampChoose in test %d", i))
 
-		timestampChooseEnd := timing.ChooseEndTimestamp(test.roundID)
+		timestampChooseEnd := timing.ChooseEndTS(test.roundID)
 		require.Equal(t, test.timestampChooseEnd, timestampChooseEnd, fmt.Sprintf("wrong timestampChooseEnd in test %d", i))
 	}
 }

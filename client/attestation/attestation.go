@@ -57,12 +57,10 @@ const (
 // fdcFilterer is only used for Attestation Requests logs parsing. Set in init().
 var fdcFilterer *fdchub.FdcHubFilterer
 
-// init sets the fdcFilterer
 func init() {
 	var err error
 
 	fdcFilterer, err = fdchub.NewFdcHubFilterer(common.Address{}, nil)
-
 	if err != nil {
 		logger.Panic("cannot get fdc contract:", err)
 	}
@@ -73,7 +71,7 @@ type IndexLog struct {
 	LogIndex    uint64 // consecutive number of log in block
 }
 
-// Weight implements priority.Weight[wTup]
+// Weight implements priority.Weight[wTup].
 type Weight struct {
 	Index IndexLog
 }
@@ -82,7 +80,7 @@ func (x Weight) Self() Weight {
 	return x
 }
 
-// Less returns true if x represents lower priority than y
+// Less returns true if x represents lower priority than y.
 func (x Weight) Less(y Weight) bool {
 	return EarlierLog(y.Index, x.Index)
 }
@@ -106,7 +104,8 @@ type Attestation struct {
 	QueuePointer *priority.Item[priority.Wrapped[*Attestation], Weight]
 }
 
-// earlierLog returns true if a has lower blockNumber then b or has the same blockNumber and lower LogIndex. Otherwise, it returns false.
+// EarlierLog returns true if a has lower blockNumber then b or has the same blockNumber and lower LogIndex.
+// Otherwise, it returns false.
 func EarlierLog(a, b IndexLog) bool {
 	if a.BlockNumber < b.BlockNumber {
 		return true
@@ -120,12 +119,12 @@ func EarlierLog(a, b IndexLog) bool {
 
 // AttestationFromDatabaseLog creates an Attestation from an attestation request event log.
 func AttestationFromDatabaseLog(request database.Log) (Attestation, error) {
-	requestLog, err := ParseAttestationRequestLog(request)
+	rLog, err := ParseAttestationRequestLog(request)
 	if err != nil {
 		return Attestation{}, fmt.Errorf("parsing log: %s", err)
 	}
 
-	roundID, err := timing.RoundIDForTimestamp(request.Timestamp)
+	rID, err := timing.RoundIDForTS(request.Timestamp)
 	if err != nil {
 		return Attestation{}, fmt.Errorf("parsing log, roundID: %s", err)
 	}
@@ -133,23 +132,21 @@ func AttestationFromDatabaseLog(request database.Log) (Attestation, error) {
 	indexes := []IndexLog{{request.BlockNumber, request.LogIndex}}
 
 	roundStatus := new(RoundStatusMutex)
-
 	roundStatus.Value = Unassigned
 
-	attestation := Attestation{
+	att := Attestation{
 		Indexes:     indexes,
-		RoundID:     roundID,
-		Request:     requestLog.Data,
-		Fee:         requestLog.Fee,
+		RoundID:     rID,
+		Request:     rLog.Data,
+		Fee:         rLog.Fee,
 		Status:      Waiting,
 		RoundStatus: roundStatus,
 	}
 
-	return attestation, nil
+	return att, nil
 }
 
-// Handle sends the attestation request to the correct verifier server and validates the response.
-// The response is saved in the struct.
+// Discard returns true if the attestation should be discarded and not processed further.
 func (a *Attestation) Discard(ctx context.Context) bool {
 	a.RoundStatus.RLock()
 	defer a.RoundStatus.RUnlock()
@@ -259,7 +256,7 @@ func (a *Attestation) validateResponse() error {
 		return fmt.Errorf("cannot read lut from request: %s, %s", hex.EncodeToString(a.Request), err)
 	}
 
-	roundStart := timing.ChooseStartTimestamp(a.RoundID)
+	roundStart := timing.ChooseStartTS(a.RoundID)
 	if !validLUT(lut, a.LUTLimit, roundStart) {
 		a.Status = InvalidLUT
 		return nil

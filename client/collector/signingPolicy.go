@@ -44,7 +44,8 @@ func SigningPolicyInitializedListener(
 	}
 
 	// signingPolicyStorage expects policies in increasing order
-	var sorted []shared.VotersData
+	sorted := make([]shared.VotersData, 0, len(logs))
+
 	for i := range logs {
 		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[len(logs)-i-1])
 		if err != nil {
@@ -66,7 +67,7 @@ func SigningPolicyInitializedListener(
 
 // spiTargetedListener that only starts aggressive queries for new signingPolicyInitialized events a bit before the expected emission and stops once it gets one and waits until the next window.
 //
-// spi = signingPolicyInitialized
+// spi = signingPolicyInitialized.
 func spiTargetedListener(
 	ctx context.Context,
 	db *gorm.DB,
@@ -89,7 +90,7 @@ func spiTargetedListener(
 	}
 
 	for {
-		expectedSPIStart := timing.ExpectedRewardEpochStartTimestamp(lastInitializedRewardEpochID + 1)
+		expectedSPIStart := timing.ExpectedRewardEpochStartTS(lastInitializedRewardEpochID + 1)
 		untilStart := time.Until(time.Unix(int64(expectedSPIStart)-int64(timing.Chain.CollectDurationSec)*startOffset, 0)) // head start for querying of signing policy
 		timer := time.NewTimer(untilStart)
 

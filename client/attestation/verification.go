@@ -27,24 +27,6 @@ func init() {
 
 type Request []byte
 
-type Response []byte
-
-// IsStaticType checks whether bytes that represent abi.encoded response encode an instance of static type.
-// abi.encode(X) = enc((X)) of X of type T is encoding of tuple (X) of type (T). By specification, enc((X)) = head(X)tail(X).
-// If T is static, head(X) = enc(X) and tail(X) is empty. If T is dynamic, head(X) = bytes32(len(head(X))) = bytes32(32) and tail = enc(X).
-// See https://docs.soliditylang.org/en/latest/abi-spec.html for detailed specification.
-func IsStaticType(bytes []byte) (bool, error) {
-	if len(bytes) < 96 {
-		return false, errors.New("bytes are to short")
-	}
-
-	first32Bytes := [32]byte(bytes[:32])
-	d := [32]byte{}
-	d[31] = byte(32)
-
-	return d != first32Bytes, nil
-}
-
 // AttestationType returns the attestation type of the request (the first 32 bytes).
 func (r Request) AttestationType() ([32]byte, error) {
 	res := [32]byte{}
@@ -81,9 +63,11 @@ func (r Request) MIC() (common.Hash, error) {
 	return mic, nil
 }
 
-// ComputeMIC computes Mic from the response.
+type Response []byte
+
+// ComputeMIC computes MIC from the response.
 //
-// Mic is defined by solidity code abi.encode(abi.Encode(response,"Flare")) where response is an instance of a struct defined by the attestation type.
+// MIC is defined by solidity code abi.encode(abi.Encode(response,"Flare")) where response is an instance of a struct defined by the attestation type.
 // It is assumed that roundID in the response is set to 0.
 func (r Response) ComputeMIC(args *abi.Arguments) (common.Hash, error) {
 	decoded, err := args.Unpack(r)
@@ -183,6 +167,7 @@ func (r Response) AddRound(roundID uint32) error {
 	if len(r) != resLength {
 		return fmt.Errorf("length of Response changed at AddRound: before %v, after: %v", resLength, len(r))
 	}
+
 	return nil
 }
 
@@ -196,7 +181,22 @@ func (r Response) Hash(roundID uint32) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, err
 	}
-	hash := crypto.Keccak256Hash(r)
 
-	return hash, nil
+	return crypto.Keccak256Hash(r), nil
+}
+
+// IsStaticType checks whether bytes that represent abi.encoded response encode an instance of static type.
+// abi.encode(X) = enc((X)) of X of type T is encoding of tuple (X) of type (T). By specification, enc((X)) = head(X)tail(X).
+// If T is static, head(X) = enc(X) and tail(X) is empty. If T is dynamic, head(X) = bytes32(len(head(X))) = bytes32(32) and tail = enc(X).
+// See https://docs.soliditylang.org/en/latest/abi-spec.html for detailed specification.
+func IsStaticType(bytes []byte) (bool, error) {
+	if len(bytes) < 96 {
+		return false, errors.New("bytes are to short")
+	}
+
+	first32 := [32]byte(bytes[:32])
+	d := [32]byte{}
+	d[31] = byte(32)
+
+	return d != first32, nil
 }

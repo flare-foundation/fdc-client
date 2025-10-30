@@ -201,7 +201,7 @@ func TestManager(t *testing.T) {
 		require.Equal(t, attestation.Success, r.Attestations[i].Status)
 	}
 
-	var messages []payload.Message
+	messages := make([]payload.Message, 0, len(policy.Voters.VoterDataMap))
 
 	for address := range policy.Voters.VoterDataMap {
 		currentLog := bitVoteMessage

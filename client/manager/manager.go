@@ -90,9 +90,9 @@ func (m *Manager) Run(ctx context.Context) {
 				logger.Debugf("deleted signing policy for epoch %d", deleted[j])
 			}
 
-		case bitVotesForRound := <-m.bitVotes:
-			for i := range bitVotesForRound.Messages {
-				bitVoteErr, err := m.OnBitVote(bitVotesForRound.Messages[i])
+		case bvsForRound := <-m.bitVotes:
+			for i := range bvsForRound.Messages {
+				bitVoteErr, err := m.OnBitVote(bvsForRound.Messages[i])
 
 				if bitVoteErr != nil {
 					logger.Debug("bad bitVote: %s", bitVoteErr)
@@ -101,7 +101,8 @@ func (m *Manager) Run(ctx context.Context) {
 					logger.Errorf("bit vote error: %s", err)
 				}
 			}
-			r, ok := m.Rounds.Get(bitVotesForRound.ID)
+
+			r, ok := m.Rounds.Get(bvsForRound.ID)
 			if !ok {
 				break
 			}
@@ -109,11 +110,10 @@ func (m *Manager) Run(ctx context.Context) {
 			now := time.Now()
 			err := r.ComputeConsensusBitVote()
 			logger.Debugf("BitVote algorithm finished in %s", time.Since(now))
-
 			if err != nil {
-				logger.Warnf("Failed bitVote in round %d: %s", bitVotesForRound.ID, err)
+				logger.Warnf("Failed bitVote in round %d: %s", bvsForRound.ID, err)
 			} else {
-				logger.Debugf("Consensus bitVote %s for round %d computed.", r.ConsensusBitVote.EncodeBitVoteHex(), bitVotesForRound.ID)
+				logger.Debugf("Consensus bitVote %s for round %d computed.", r.ConsensusBitVote.EncodeBitVoteHex(), bvsForRound.ID)
 
 				noOfRetried, err := m.retryUnsuccessfulChosen(r)
 				if err != nil {
@@ -160,11 +160,11 @@ func (m *Manager) GetOrCreateRound(roundID uint32) (*round.Round, error) {
 
 // OnBitVote processes payload message that is assumed to be a bitVote and adds it to the correct round.
 func (m *Manager) OnBitVote(message payload.Message) (error, error) {
-	if message.Timestamp < timing.ChooseStartTimestamp(message.VotingRound) {
+	if message.Timestamp < timing.ChooseStartTS(message.VotingRound) {
 		return fmt.Errorf("bitVote from %s for voting round %d too soon", message.From, message.VotingRound), nil
 	}
 
-	if message.Timestamp >= timing.ChooseEndTimestamp(message.VotingRound) {
+	if message.Timestamp >= timing.ChooseEndTS(message.VotingRound) {
 		return fmt.Errorf("bitVote from %s for voting round %d too late", message.From, message.VotingRound), nil
 	}
 

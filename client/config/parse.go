@@ -62,13 +62,13 @@ func parseSource(sourceConfigBig sourceBig) (Source, error) {
 }
 
 // ParseAttestationType parses attestation type configurations.
-func ParseAttestationType(attTypeConfigUnparsed AttestationTypeUnparsed) (AttestationType, error) {
-	responseArguments, responseAbiString, err := ReadABI(attTypeConfigUnparsed.ABIPath)
+func ParseAttestationType(attTypeCfgUnparsed AttestationTypeUnparsed) (AttestationType, error) {
+	responseArguments, responseAbiString, err := ReadABI(attTypeCfgUnparsed.ABIPath)
 	if err != nil {
 		return AttestationType{}, fmt.Errorf("getting abi %s", err)
 	}
 
-	sourcesConfig, err := parseSources(attTypeConfigUnparsed.Sources)
+	sourcesCfg, err := parseSources(attTypeCfgUnparsed.Sources)
 	if err != nil {
 		return AttestationType{}, fmt.Errorf("parsing: %s", err)
 	}
@@ -76,7 +76,7 @@ func ParseAttestationType(attTypeConfigUnparsed AttestationTypeUnparsed) (Attest
 	return AttestationType{
 			ResponseArguments: responseArguments,
 			ResponseABIString: responseAbiString,
-			SourcesConfig:     sourcesConfig,
+			SourcesConfig:     sourcesCfg,
 		},
 		nil
 }

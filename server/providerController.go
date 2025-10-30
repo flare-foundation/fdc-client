@@ -29,10 +29,13 @@ type submitXParams struct {
 }
 
 func newFDCProtocolProviderController(rounds *storage.Cyclic[uint32, *round.Round], protocolID uint8) *FDCProtocolProviderController {
-	return &FDCProtocolProviderController{rounds: rounds, protocolID: protocolID}
+	return &FDCProtocolProviderController{
+		rounds:     rounds,
+		protocolID: protocolID,
+	}
 }
 
-func validateEVMAddressString(address string) bool {
+func validateEVMAddress(address string) bool {
 	address = strings.TrimPrefix(address, hexPrefix)
 	dec, err := hex.DecodeString(address)
 	if err != nil {
@@ -41,7 +44,7 @@ func validateEVMAddressString(address string) bool {
 	if len(dec) != 20 {
 		return false
 	}
-	return err == nil
+	return true
 }
 
 func validateSubmitXParams(params map[string]string) (submitXParams, error) {
@@ -52,20 +55,20 @@ func validateSubmitXParams(params map[string]string) (submitXParams, error) {
 	if err != nil {
 		return submitXParams{}, fmt.Errorf("votingRound param is not a number")
 	}
+
 	if _, ok := params["submitAddress"]; !ok {
 		return submitXParams{}, fmt.Errorf("missing submitAddress param")
 	}
 	submitAddress := params["submitAddress"]
-	if !validateEVMAddressString(submitAddress) {
+	if !validateEVMAddress(submitAddress) {
 		return submitXParams{}, fmt.Errorf("submitAddress param is not a valid EVM address")
 	}
+
 	return submitXParams{votingRoundID: uint32(votingRoundID), submitAddress: submitAddress}, nil
 }
 
 func submitXController(
 	params map[string]string,
-	_ interface{},
-	_ interface{},
 	service func(uint32, string) (string, bool, error),
 	timeLock func(uint32) uint64,
 ) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
@@ -79,7 +82,7 @@ func submitXController(
 	atTheEarliest := timeLock(pathParams.votingRoundID)
 	now := uint64(time.Now().Unix())
 	if atTheEarliest > now {
-		return payload.SubprotocolResponse{}, restserver.ToEarlyErrorHandler(fmt.Errorf("to early %v before %d", atTheEarliest-now, atTheEarliest))
+		return payload.SubprotocolResponse{}, restserver.ToEarlyErrorHandler(fmt.Errorf("too early %v before %d", atTheEarliest-now, atTheEarliest))
 	}
 
 	rsp, exists, err := service(pathParams.votingRoundID, pathParams.submitAddress)
@@ -95,32 +98,33 @@ func submitXController(
 	return response, nil
 }
 
-func (controller *FDCProtocolProviderController) submit1Controller(
+func (c *FDCProtocolProviderController) submit1Controller(
 	params map[string]string,
-	queryParams interface{},
-	body interface{},
+	_ any,
+	_ any,
 ) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	return submitXController(params, queryParams, body, controller.submit1Service, timing.RoundStartTime)
+	return submitXController(params, c.submit1Service, timing.RoundStartTS)
 }
 
-func (controller *FDCProtocolProviderController) submit2Controller(
+func (c *FDCProtocolProviderController) submit2Controller(
 	params map[string]string,
-	queryParams interface{},
-	body interface{},
+	_ any,
+	_ any,
 ) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	return submitXController(params, queryParams, body, controller.submit2Service, timing.ChooseStartTimestamp)
+	return submitXController(params, c.submit2Service, timing.ChooseStartTS)
 }
 
-func (controller *FDCProtocolProviderController) submitSignaturesController(
+func (c *FDCProtocolProviderController) submitSignaturesController(
 	params map[string]string,
-	queryParams interface{},
-	body interface{},
+	_ any,
+	_ any,
 ) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
 	pathParams, err := validateSubmitXParams(params)
 	if err != nil {
 		logger.Error(err)
 		return payload.SubprotocolResponse{}, restserver.BadParamsErrorHandler(err)
 	}
-	response := controller.submitSignaturesService(pathParams.votingRoundID, pathParams.submitAddress)
+
+	response := c.submitSignaturesService(pathParams.votingRoundID, pathParams.submitAddress)
 	return response, nil
 }

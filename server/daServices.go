@@ -9,10 +9,8 @@ import (
 	"github.com/flare-foundation/fdc-client/client/attestation"
 )
 
-//  wip
-
-func (controller *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
-	round, exists := controller.Rounds.Get(roundId)
+func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
+	round, exists := c.Rounds.Get(roundId)
 	if !exists {
 		return nil, false
 	}
@@ -51,8 +49,8 @@ func AttestationToDARequest(att *attestation.Attestation) DARequest {
 	return dARequest
 }
 
-func (controller *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
-	round, exists := controller.Rounds.Get(roundId)
+func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
+	round, exists := c.Rounds.Get(roundId)
 	if !exists {
 		return nil, false
 	}
@@ -65,7 +63,7 @@ func (controller *DAController) GetAttestations(roundId uint32) ([]DAAttestation
 	attestations := make([]DAAttestation, 0)
 
 	for i := range round.Attestations {
-		att, ok, err := AttestationToDAAttestation(round.Attestations[i])
+		att, ok, err := attestationToDAAttestation(round.Attestations[i])
 		if err != nil {
 			return nil, false
 		}
@@ -81,7 +79,7 @@ func (controller *DAController) GetAttestations(roundId uint32) ([]DAAttestation
 	return attestations, true
 }
 
-func AttestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bool, error) {
+func attestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bool, error) {
 	isConfirmed := att.Status == attestation.Success
 	isSelected := att.Consensus
 

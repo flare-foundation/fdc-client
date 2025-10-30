@@ -37,6 +37,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 	requestBytes := att.Request
 	encoded := hex.EncodeToString(requestBytes)
 	payload := ABIEncodedRequestBody{ABIEncodedRequest: "0x" + encoded}
+
 	encodedBody, err := json.Marshal(payload)
 	if err != nil {
 		return nil, false, err
@@ -53,9 +54,10 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 	if err != nil {
 		return nil, false, err
 	}
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return nil, false, fmt.Errorf("request responded with code %d", resp.StatusCode)
 	}
+
 	respLimited := &io.LimitedReader{R: resp.Body, N: maxRespSize}
 	// close response body after function ends
 	defer resp.Body.Close() //nolint:errcheck
@@ -72,6 +74,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 	if responseBody.Status != ValidResponseStatus {
 		return nil, false, nil
 	}
+
 	responseBytes, err := hex.DecodeString(strings.TrimPrefix(responseBody.ABIEncodedResponse, "0x"))
 	if err != nil {
 		return nil, false, err
