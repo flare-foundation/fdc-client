@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/kelseyhightower/envconfig"
 )
 
 // ReadConfigs reads user and system configurations from userFilePath and systemDirectoryPath.
@@ -24,6 +25,11 @@ func ReadConfigs(userFilePath, systemDirectoryPath string) (*UserRaw, *System, e
 	systemConfig, err := ReadSystem(systemDirectoryPath, userConfigRaw.Chain, userConfigRaw.ProtocolID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	err = envconfig.Process("", &userConfigRaw)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading env variables: %w", err)
 	}
 
 	return &userConfigRaw, &systemConfig, nil
