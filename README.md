@@ -81,6 +81,8 @@ password = "root"
 log_queries = false
 ```
 
+The database can be also set by env configs: `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
+
 ### Rest Server
 
 FSP client access data from FDC client through the rest server.

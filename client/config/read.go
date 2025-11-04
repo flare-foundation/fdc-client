@@ -16,6 +16,14 @@ import (
 // Read reads user and system configurations from userFilePath and systemDirectoryPath.
 //
 // System configurations are read for Chain and protocolID set in the user configurations.
+//
+// DB settings are overridden by environment variables if they exist.
+// The following environment variables are used:
+//   - DB_HOST
+//   - DB_PORT
+//   - DB_USERNAME
+//   - DB_PASSWORD
+//   - DB_NAME
 func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 	userConfigRaw, err := ReadUserRaw(userFilePath)
 	if err != nil {
