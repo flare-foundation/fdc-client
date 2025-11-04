@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -37,6 +38,21 @@ func TestReadUserRaw(t *testing.T) {
 	sourceConfig, ok := typeConfigs.SourcesConfig[source]
 	require.True(t, ok)
 	require.Equal(t, "12345", sourceConfig.APIKey)
+}
+
+func TestRead(t *testing.T) {
+	err := os.Setenv("DB_PORT", "3307")
+	require.NoError(t, err)
+
+	err = os.Setenv("DB_PASSWORD", "veryStrongPassword")
+	require.NoError(t, err)
+
+	user, _, err := config.Read(UserFile, SystemDirectory)
+	require.NoError(t, err)
+
+	require.Equal(t, user.DB.Port, 3307)
+	require.Equal(t, user.DB.Password, "veryStrongPassword")
+	require.Equal(t, user.DB.Username, "root")
 }
 
 func TestReadSystem(t *testing.T) {

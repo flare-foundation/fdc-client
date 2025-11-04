@@ -26,7 +26,7 @@ var CfgFlag = flag.String("config", "configs/userConfig.toml", "Configuration fi
 
 func main() {
 	flag.Parse()
-	userConfigRaw, systemConfig, err := config.ReadConfigs(*CfgFlag, systemDirectory)
+	userConfigRaw, systemConfig, err := config.Read(*CfgFlag, systemDirectory)
 	if err != nil {
 		logger.Panicf("cannot read configs: %s", err)
 	}

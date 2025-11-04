@@ -13,10 +13,10 @@ import (
 	"github.com/kelseyhightower/envconfig"
 )
 
-// ReadConfigs reads user and system configurations from userFilePath and systemDirectoryPath.
+// Read reads user and system configurations from userFilePath and systemDirectoryPath.
 //
 // System configurations are read for Chain and protocolID set in the user configurations.
-func ReadConfigs(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
+func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 	userConfigRaw, err := ReadUserRaw(userFilePath)
 	if err != nil {
 		return nil, nil, err
@@ -27,7 +27,7 @@ func ReadConfigs(userFilePath, systemDirectoryPath string) (*UserRaw, *System, e
 		return nil, nil, err
 	}
 
-	err = envconfig.Process("", &userConfigRaw)
+	err = envconfig.Process("", &userConfigRaw.DB)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading env variables: %w", err)
 	}
