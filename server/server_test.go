@@ -100,6 +100,8 @@ func TestServer(t *testing.T) {
 				return false
 			}
 
+			defer rsp.Body.Close()
+
 			return rsp.StatusCode == http.StatusOK
 		},
 		10*time.Second,
