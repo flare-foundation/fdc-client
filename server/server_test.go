@@ -100,7 +100,7 @@ func TestServer(t *testing.T) {
 				return false
 			}
 
-			defer rsp.Body.Close()
+			defer rsp.Body.Close() //nolint:errcheck
 
 			return rsp.StatusCode == http.StatusOK
 		},
