@@ -4,7 +4,7 @@ We recommend using the latest released version.
 
 ## Audit reports
 
-Audit reports are published on Flare's [Developer Hub](https://dev.flare.network/support/audits/)
+Audit reports are published on Flare's [Developer Hub](https://dev.flare.network/support/audits/).
 
 ## Reporting Vulnerabilities
 

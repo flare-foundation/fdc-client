@@ -152,17 +152,17 @@ func (a *Attestation) Discard(ctx context.Context) bool {
 	defer a.RoundStatus.RUnlock()
 
 	if a.Status == Success {
-		logger.Debugf("discarding already confirmed request in round %d", a.RoundID)
+		logger.Debugf("discarding already confirmed request from round %d", a.RoundID)
 		return true
 	}
 
 	if a.RoundStatus.Value == Done {
-		logger.Debugf("discarding request in finished round %d", a.RoundID)
+		logger.Debugf("discarding request from finished round %d", a.RoundID)
 		return true
 	}
 
 	if a.RoundStatus.Value == Consensus && !a.Consensus {
-		logger.Debugf("discarding unselected request in round %d", a.RoundID)
+		logger.Debugf("discarding unselected request from round %d", a.RoundID)
 		return true
 	}
 
