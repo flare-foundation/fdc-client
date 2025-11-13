@@ -5,7 +5,8 @@ All contributions are welcome.
 
 ## Issues
 
-_Sensitive security-related issues should be reported to any of [codeowners](/CODEOWNERS)._
+_Sensitive security-related issues should not be reported publicly.
+See [Security](SECURITY.md)._
 
 To share ideas, considerations, or concerned open an issue.
 Before filing an issue make sure the issue has not been already raised.
@@ -19,7 +20,7 @@ In the issue, answer the following questions:
 
 Before opening a pull request open an issue on why the request is needed.
 
-To contribute: fork the repo, make your improvements, commit and open a pull request.
+To contribute: fork the repo, make your improvements, commit, and open a pull request.
 The maintainers will review the request.
 
 The request must:
@@ -40,10 +41,18 @@ Make sure you are using a version of go higher or equal to the one specified in 
 Get all the dependencies:
 
 ```bash
+go mod download
+```
+
+of with
+
+```bash
 go mod tidy
 ```
 
-Run all tests:
+### Tests
+
+Run unit tests with
 
 ```bash
 go test ./...
@@ -55,8 +64,24 @@ Generate a coverage report:
 $ ./gencover.sh
 ```
 
+### Linting
+
 Run linters (make sure you have [golangci-lint](https://golangci-lint.run/) installed) with
 
 ```bash
 golangci-lint run
 ```
+
+The linting configs are specified in [.golangci.yml](.golangci.yml).
+
+## AI Assistance
+
+Any significant use of the AI assistance in the contribution MUST be disclosed in the pull request along with the extent of the use.
+
+An example disclosure:
+
+> This PR was written primarily by Claude Code.
+
+Or a more detailed disclosure:
+
+> I consulted ChatGPT for the following code snippets: ...

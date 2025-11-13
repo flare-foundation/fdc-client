@@ -2,14 +2,23 @@
 
 We recommend using the latest released version.
 
-## Audit reports
-
-Audit reports are published on Flare's [Developer Hub](https://dev.flare.network/support/audits/).
-
 ## Reporting Vulnerabilities
 
 Please do not report a vulnerability using an issue or any other public channel.
 
-To disclose a vulnerability reach out to any of the [codeowners](CODEOWNERS).
+If you have found a possible vulnerability, please send an email to `security at flare dot network`.
 
-See TODO for the active bug bounties.
+## Bug bounties
+
+We sincerely appreciate and encourage reports of suspected security vulnerabilities.
+Please refer to our [Immunefi Bug Bounty Program](https://immunefi.com/bug-bounty/flarenetwork/information/) for scope, rules, and submission guidelines.
+
+## Vulnerability disclosures
+
+Critical vulnerabilities will be disclosed via GitHub's
+[security advisory](https://github.com/flare-foundation/verifier-indexer-framework/security)
+system.
+
+## Audit reports
+
+Audit reports are published on Flare's [Developer Hub](https://dev.flare.network/support/audits/).

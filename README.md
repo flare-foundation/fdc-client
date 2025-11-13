@@ -1,6 +1,14 @@
-<p align="left">
-  <a href="https://flare.network/" target="blank"><img src="https://content.flare.network/Flare-2.svg" width="400" height="300" alt="Flare Logo" /></a>
-</p>
+<div align="center">
+  <a href="https://flare.network/" target="blank">
+    <img src="https://content.flare.network/Flare-2.svg" width="300" alt="Flare Logo" />
+  </a>
+  <br />
+  <a href="CONTRIBUTING.md">Contributing</a>
+  ·
+  <a href="SECURITY.md">Security</a>
+  ·
+  <a href="CHANGELOG.md">Changelog</a>
+</div>
 
 # Flare Data Connector Client
 
@@ -14,6 +22,8 @@ It does the following tasks:
 - For each round, provides Merkle root of Merkle tree build on hashes of the confirmed attestations.
 
 The client has no direct interactions with the Flare blockchain/node. The data is read through C-Chain indexer and submitted through Flare System Client.
+
+[![API Reference](https://pkg.go.dev/badge/github.com/flare-foundation/fdc-client)](https://pkg.go.dev/github.com/flare-foundation/fdc-client?tab=doc)
 
 ## Protocol
 
