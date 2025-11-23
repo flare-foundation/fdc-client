@@ -121,6 +121,10 @@ func (controller *FDCProtocolProviderController) submitSignaturesController(
 		logger.Error(err)
 		return payload.SubprotocolResponse{}, restserver.BadParamsErrorHandler(err)
 	}
-	response := controller.submitSignaturesService(pathParams.votingRoundID, pathParams.submitAddress)
+	response, err := controller.submitSignaturesService(pathParams.votingRoundID, pathParams.submitAddress)
+	if err != nil {
+		logger.Error(err)
+		return payload.SubprotocolResponse{}, restserver.InternalServerErrorHandler(err)
+	}
 	return response, nil
 }
