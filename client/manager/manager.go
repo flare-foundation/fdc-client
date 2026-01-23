@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -68,6 +69,10 @@ func (m *Manager) Run(ctx context.Context) {
 	}
 
 	for i := range signingPolicies {
+		if signingPolicies[i].Policy.RewardEpochId.Cmp(big.NewInt(366)) == 0 {
+			continue
+		}
+
 		if err := m.OnSigningPolicy(signingPolicies[i]); err != nil {
 			logger.Panic("signing policy error:", err)
 		}
@@ -79,6 +84,10 @@ func (m *Manager) Run(ctx context.Context) {
 			logger.Debug("New signing policy received")
 
 			for i := range signingPolicies {
+				if signingPolicies[i].Policy.RewardEpochId.Cmp(big.NewInt(366)) == 0 {
+					continue
+				}
+
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
 					logger.Error("signing policy error:", err)
@@ -222,14 +231,13 @@ func (m *Manager) OnSigningPolicy(data shared.VotersData) error {
 
 // VotersDataCheck checks consistency of votersData.
 func VotersDataCheck(data shared.VotersData) error {
-	if len(data.Policy.Voters) != len(data.Policy.Weights) {
-		return errors.New("policy error: signing addresses and weights do not match")
-	}
-	if len(data.SubmitToSigningAddress) != len(data.Policy.Voters) {
-		return errors.New("policy error: submit to signing addresses map incomplete or matching submission addresses")
-	}
-	if len(utils.Invert(data.SubmitToSigningAddress)) != len(data.Policy.Voters) {
-		return errors.New("policy error: matching signing policy addresses")
+	sigToSubmit := utils.Invert(data.SubmitToSigningAddress)
+
+	for _, voter := range data.Policy.Voters {
+		_, ok := sigToSubmit[voter]
+		if !ok {
+			return errors.New("policy error: submit to signing addresses map incomplete")
+		}
 	}
 
 	return nil
