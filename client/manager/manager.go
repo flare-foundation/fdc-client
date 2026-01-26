@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -69,10 +68,6 @@ func (m *Manager) Run(ctx context.Context) {
 	}
 
 	for i := range signingPolicies {
-		if signingPolicies[i].Policy.RewardEpochId.Cmp(big.NewInt(366)) == 0 {
-			continue
-		}
-
 		if err := m.OnSigningPolicy(signingPolicies[i]); err != nil {
 			logger.Panic("signing policy error:", err)
 		}
@@ -84,10 +79,6 @@ func (m *Manager) Run(ctx context.Context) {
 			logger.Debug("New signing policy received")
 
 			for i := range signingPolicies {
-				if signingPolicies[i].Policy.RewardEpochId.Cmp(big.NewInt(366)) == 0 {
-					continue
-				}
-
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
 					logger.Error("signing policy error:", err)
