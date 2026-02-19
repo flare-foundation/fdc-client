@@ -16,6 +16,35 @@ import (
 	"gorm.io/gorm"
 )
 
+var (
+	RelayFlareOld = common.HexToAddress("0x57a4c3676d08Aa5d15410b5A6A80fBcEF72f3F45")
+	RelayFlareNew = common.HexToAddress("0xCcF30790A93F15e24EB909548a2C58a9b0a7FBd4")
+
+	RelayCoston2Old = common.HexToAddress("0x97702e350CaEda540935d92aAf213307e9069784")
+	RelayCoston2New = common.HexToAddress("0xa10B672D1c62e5457b17af63d4302add6A99d7dE")
+
+	RelaySongbirdOld = common.HexToAddress("0x67a916E175a2aF01369294739AA60dDdE1Fad189")
+	RelaySongbirdNew = common.HexToAddress("0xCB86E8Be709001e01897Bf59847406853da8f14b")
+
+	RelayCostonOld = common.HexToAddress("0x92a6E1127262106611e1e129BB64B6D8654273F7")
+	RelayCostonNew = common.HexToAddress("0x051f214D346Cfd97B107BECb87E2B35D1b4287E9")
+)
+
+func RequiresNewRelayAddress(address common.Address) (bool, common.Address) {
+	switch address {
+	case RelayFlareOld:
+		return true, RelayFlareNew
+	case RelayCoston2Old:
+		return true, RelayCoston2New
+	case RelaySongbirdOld:
+		return true, RelaySongbirdNew
+	case RelayCostonOld:
+		return true, RelayCostonNew
+	default:
+		return false, address
+	}
+}
+
 // SigningPolicyInitializedListener initiates a channel that serves signingPolicyInitialized events emitted by relayContractAddress.
 func SigningPolicyInitializedListener(
 	ctx context.Context,
@@ -31,23 +60,46 @@ func SigningPolicyInitializedListener(
 		Number:  3,
 	}
 
-	logs, err := database.FetchLatestLogsByAddressAndTopic0(
-		ctx, db, params,
-	)
-	if err != nil {
-		logger.Panic("error fetching initial logs:", err)
+	allLogs := make([]database.Log, 0, 3)
+
+	if requires, newAddress := RequiresNewRelayAddress(relayContractAddress); requires {
+		params.Address = newAddress
+
+		newLogs, err := database.FetchLatestLogsByAddressAndTopic0(
+			ctx, db, params,
+		)
+		if err != nil {
+			logger.Panic("error fetching initial logs new:", err)
+		}
+
+		allLogs = append(allLogs, newLogs...)
 	}
+
+	if len(allLogs) < 3 {
+		params.Address = relayContractAddress
+		params.Number = 3 - len(allLogs)
+
+		logs, err := database.FetchLatestLogsByAddressAndTopic0(
+			ctx, db, params,
+		)
+		if err != nil {
+			logger.Panic("error fetching initial logs:", err)
+		}
+
+		allLogs = append(allLogs, logs...)
+	}
+
 	latestQuery := time.Now()
-	logger.Debug("Logs length:", len(logs))
-	if len(logs) == 0 {
-		logger.Panic("No initial signing policies found:", err)
+	logger.Debug("Logs length:", len(allLogs))
+	if len(allLogs) == 0 {
+		logger.Panic("No initial signing policies found:")
 	}
 
 	// signingPolicyStorage expects policies in increasing order
-	sorted := make([]shared.VotersData, 0, len(logs))
+	sorted := make([]shared.VotersData, 0, len(allLogs))
 
-	for i := range logs {
-		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[len(logs)-i-1])
+	for i := range allLogs {
+		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, allLogs[len(allLogs)-i-1])
 		if err != nil {
 			logger.Panic("error fetching initial signing policies with submit addresses:", err)
 		}
@@ -62,7 +114,7 @@ func SigningPolicyInitializedListener(
 		logger.Info("SigningPolicyInitializedListener exiting:", ctx.Err())
 	}
 
-	spiTargetedListener(ctx, db, relayContractAddress, registryContractAddress, logs[0], latestQuery, votersDataChan)
+	spiTargetedListener(ctx, db, relayContractAddress, registryContractAddress, allLogs[0], latestQuery, votersDataChan)
 }
 
 // spiTargetedListener that only starts aggressive queries for new signingPolicyInitialized events a bit before the expected emission and stops once it gets one and waits until the next window.
@@ -148,6 +200,19 @@ func queryNextSPI(
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		if requires, newAddress := RequiresNewRelayAddress(relayContractAddress); requires {
+			params.Address = newAddress
+
+			newLogs, err := database.FetchLogsByAddressAndTopic0Timestamp(
+				ctx, db, params,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			logs = append(logs, newLogs...)
 		}
 
 		if len(logs) > 0 {
