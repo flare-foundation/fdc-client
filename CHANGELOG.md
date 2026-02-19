@@ -1,11 +1,7 @@
 # Changelog
 
-## [v1.1.1] - 2025-unreleased
-
-### Added
-
-- CHANGELOG.md
+## [v1.2.5] - 2025-2-19
 
 ### Changed
 
-- Bumped Go version to 1.25.1
+- - Addressed change of Relay contract address on all chains.
