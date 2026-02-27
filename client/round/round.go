@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
+	"sync"
 
 	"github.com/flare-foundation/go-flare-common/pkg/merkle"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
@@ -31,6 +32,8 @@ type Round struct {
 	ConsensusBitVote             bitvotes.BitVote
 	voterSet                     *voters.Set
 	merkleTree                   merkle.Tree
+
+	sync.RWMutex
 }
 
 // New returns a pointer to a new Round with id and voterSet.
@@ -52,6 +55,9 @@ func New(id uint32, voterSet *voters.Set) *Round {
 // If not, it is added to the round. If yes, the fee is added to the existent attestation
 // and Index is set to the earlier one.
 func (r *Round) AddAttestation(attToAdd *attestation.Attestation) bool {
+	r.Lock()
+	defer r.Unlock()
+
 	identifier := crypto.Keccak256Hash(attToAdd.Request)
 	att, exists := r.attestationMap[identifier]
 	if exists {
@@ -82,6 +88,9 @@ func (r *Round) sortAttestations() {
 
 // BitVote returns the BitVote for the round according to the current status of Attestations.
 func (r *Round) BitVote() (bitvotes.BitVote, error) {
+	r.Lock()
+	defer r.Unlock()
+
 	r.sortAttestations()
 	return attestation.BitVoteFromAttestations(r.Attestations)
 }
@@ -98,6 +107,9 @@ func (r *Round) BitVoteBytes() ([]byte, error) {
 
 // ComputeConsensusBitVote computes the consensus BitVote according to the collected bitVotes and sets consensus status to the attestations.
 func (r *Round) ComputeConsensusBitVote() error {
+	r.Lock()
+	defer r.Unlock()
+
 	defer func() { r.ConsensusCalculationFinished = true }()
 	r.sortAttestations()
 
@@ -141,7 +153,9 @@ func (r *Round) setConsensusStatus(consensusBitVote bitvotes.BitVote) error {
 	}
 
 	for i := range r.Attestations {
+		r.Attestations[i].Lock()
 		r.Attestations[i].Consensus = consensusBitVote.BitVector.Bit(i) == 1
+		r.Attestations[i].Unlock()
 	}
 
 	return nil
@@ -151,8 +165,14 @@ func (r *Round) setConsensusStatus(consensusBitVote bitvotes.BitVote) error {
 // The computed tree is stored in the round.
 // If any of the hash of the chosen attestations is not successfully verified, the tree is not computed.
 func (r *Round) MerkleTree() (merkle.Tree, error) {
+	r.Lock()
+	defer r.Unlock()
+
 	var hashes []common.Hash
 	for i := range r.Attestations {
+		r.Attestations[i].RLock()
+		defer r.Attestations[i].RUnlock()
+
 		if r.Attestations[i].Consensus {
 			if r.Attestations[i].Status != attestation.Success {
 				return merkle.Tree{}, errors.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
@@ -173,9 +193,11 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 
 // MerkleTreeCached gets Merkle tree from cache if it is already computed or computes it.
 func (r *Round) MerkleTreeCached() (merkle.Tree, error) {
+	r.RLock()
 	if len(r.merkleTree) != 0 {
 		return r.merkleTree, nil
 	}
+	r.RUnlock()
 
 	return r.MerkleTree()
 }

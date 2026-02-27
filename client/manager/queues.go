@@ -60,6 +60,7 @@ func run(ctx context.Context, q *attestationQueue) {
 
 		if err := ctx.Err(); err != nil {
 			logger.Infof("queue %s exiting: %v ", q.Name(), err)
+			return
 		}
 	}
 }

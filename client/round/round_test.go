@@ -137,7 +137,7 @@ func TestAddAttestation(t *testing.T) {
 			att, err := attestation.AttestationFromDatabaseLog(request)
 			require.NoError(t, err, fmt.Sprintf("error parsing request %d in test %d ", j, i))
 
-			added := round.AddAttestation(&att)
+			added := round.AddAttestation(att)
 			require.Equal(t, test.added[j], added, fmt.Sprintf("wrongly added request %d in test %d ", j, i))
 		}
 		require.Equal(t, test.nuOfAttestations, len(round.Attestations), fmt.Sprintf("wrong number of attestations in test %d", i))

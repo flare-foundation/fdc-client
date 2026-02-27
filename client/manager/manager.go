@@ -117,7 +117,7 @@ func (m *Manager) Run(ctx context.Context) {
 
 				noOfRetried, err := m.retryUnsuccessfulChosen(r)
 				if err != nil {
-					logger.Warnf("error retrying round %d: s", r.ID, err)
+					logger.Warnf("error retrying round %d: %v", r.ID, err)
 				} else if noOfRetried > 0 {
 					logger.Debugf("retrying %d attestations in round %d", noOfRetried, r.ID)
 				}
@@ -132,7 +132,7 @@ func (m *Manager) Run(ctx context.Context) {
 			}
 
 		case <-ctx.Done():
-			logger.Info("Manager exiting:", ctx.Err())
+			logger.Info("Manager exiting: %v", ctx.Err())
 			return
 		}
 	}
@@ -195,9 +195,9 @@ func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
 		return fmt.Errorf("OnRequest: %s", err)
 	}
 
-	added := round.AddAttestation(&attestation)
+	added := round.AddAttestation(attestation)
 	if added {
-		if err := m.AddToQueue(ctx, &attestation); err != nil {
+		if err := m.AddToQueue(ctx, attestation); err != nil {
 			return err
 		}
 	}
@@ -239,6 +239,9 @@ func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 	count := 0 // only for logging
 
 	for i := range round.Attestations {
+		round.Attestations[i].RLock()
+		defer round.Attestations[i].RUnlock()
+
 		if round.Attestations[i].Consensus && round.Attestations[i].Status != attestation.Success {
 			queueName := round.Attestations[i].QueueName
 

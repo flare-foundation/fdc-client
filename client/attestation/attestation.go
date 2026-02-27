@@ -102,6 +102,8 @@ type Attestation struct {
 	Credentials       *VerifierCredentials
 
 	QueuePointer *priority.Item[priority.Wrapped[*Attestation], Weight]
+
+	sync.RWMutex
 }
 
 // EarlierLog returns true if a has lower blockNumber then b or has the same blockNumber and lower LogIndex.
@@ -118,15 +120,15 @@ func EarlierLog(a, b IndexLog) bool {
 }
 
 // AttestationFromDatabaseLog creates an Attestation from an attestation request event log.
-func AttestationFromDatabaseLog(request database.Log) (Attestation, error) {
+func AttestationFromDatabaseLog(request database.Log) (*Attestation, error) {
 	rLog, err := ParseAttestationRequestLog(request)
 	if err != nil {
-		return Attestation{}, fmt.Errorf("parsing log: %s", err)
+		return nil, fmt.Errorf("parsing log: %s", err)
 	}
 
 	rID, err := timing.RoundIDForTS(request.Timestamp)
 	if err != nil {
-		return Attestation{}, fmt.Errorf("parsing log, roundID: %s", err)
+		return nil, fmt.Errorf("parsing log, roundID: %s", err)
 	}
 
 	indexes := []IndexLog{{request.BlockNumber, request.LogIndex}}
@@ -143,11 +145,14 @@ func AttestationFromDatabaseLog(request database.Log) (Attestation, error) {
 		RoundStatus: roundStatus,
 	}
 
-	return att, nil
+	return &att, nil
 }
 
 // Discard returns true if the attestation should be discarded and not processed further.
 func (a *Attestation) Discard(ctx context.Context) bool {
+	a.RLock()
+	defer a.RUnlock()
+
 	a.RoundStatus.RLock()
 	defer a.RoundStatus.RUnlock()
 
@@ -172,6 +177,9 @@ func (a *Attestation) Discard(ctx context.Context) bool {
 // Handle sends the attestation request to the correct verifier server and validates the response.
 // The response is saved in the struct.
 func (a *Attestation) Handle(ctx context.Context) error {
+	a.Lock()
+	defer a.Unlock()
+
 	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError
@@ -194,6 +202,9 @@ func (a *Attestation) Handle(ctx context.Context) error {
 
 // prepareRequest adds response ABI, LUT limit and verifierCredentials to the Attestation.
 func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationTypes) error {
+	a.Lock()
+	defer a.Unlock()
+
 	attType, err := a.Request.AttestationType()
 	if err != nil {
 		a.Status = ProcessError
@@ -305,10 +316,15 @@ func BitVoteFromAttestations(attestations []*Attestation) (bitvotes.BitVote, err
 	}
 
 	for i, a := range attestations {
+		a.RLock()
 		if a.Status == Success {
 			bitVector.SetBit(bitVector, i, 1)
 		}
+		a.RUnlock()
 	}
 
-	return bitvotes.BitVote{Length: uint16(len(attestations)), BitVector: bitVector}, nil
+	return bitvotes.BitVote{
+		Length:    uint16(len(attestations)),
+		BitVector: bitVector,
+	}, nil
 }

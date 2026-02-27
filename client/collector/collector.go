@@ -48,7 +48,7 @@ func init() {
 
 	signingPolicyEvent, ok := relayABI.Events["SigningPolicyInitialized"]
 	if !ok {
-		logger.Panic("cannot get SigningPolicyInitialized event:", err)
+		logger.Panic("cannot get SigningPolicyInitialized event abi")
 	}
 	signingPolicyInitializedEventSel = signingPolicyEvent.ID
 
@@ -59,7 +59,7 @@ func init() {
 
 	requestEvent, ok := fdcABI.Events["AttestationRequest"]
 	if !ok {
-		logger.Panic("cannot get AttestationRequest event:", err)
+		logger.Panic("cannot get AttestationRequest event abi")
 	}
 
 	AttestationRequestEventSel = requestEvent.ID
@@ -71,7 +71,7 @@ func init() {
 
 	voterRegisteredEvent, ok := registryABI.Events["VoterRegistered"]
 	if !ok {
-		logger.Panic("cannot get VoterRegistered event:", err)
+		logger.Panic("cannot get VoterRegistered event abi")
 	}
 
 	voterRegisteredEventSel = voterRegisteredEvent.ID

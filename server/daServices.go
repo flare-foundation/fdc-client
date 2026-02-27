@@ -25,6 +25,9 @@ func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
 }
 
 func AttestationToDARequest(att *attestation.Attestation) DARequest {
+	att.RLock()
+	defer att.RUnlock()
+
 	var status AttestationStatus
 
 	switch att.Status {
@@ -80,6 +83,9 @@ func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
 }
 
 func attestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bool, error) {
+	att.RLock()
+	defer att.RUnlock()
+
 	isConfirmed := att.Status == attestation.Success
 	isSelected := att.Consensus
 
