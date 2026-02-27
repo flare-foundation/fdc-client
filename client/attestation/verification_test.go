@@ -149,6 +149,9 @@ func TestRequest(t *testing.T) {
 		copy(expectedAttTypeAndSource[:], []byte(test.attType))
 		copy(expectedAttTypeAndSource[32:], []byte(test.source))
 
+		// type and source string
+		require.Equal(t, fmt.Sprintf("%s/%s", test.attType, test.source), req.TypeAndSourceString(), fmt.Sprintf("error type and source string in test %d", i))
+
 		// mic
 		expectedMic := common.HexToHash(test.mic)
 		mic, err := req.MIC()

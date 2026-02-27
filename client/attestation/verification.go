@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/flare-foundation/fdc-client/client/utils"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 )
@@ -49,6 +50,23 @@ func (r Request) Source() ([32]byte, error) {
 	copy(res[:], r[32:64])
 
 	return res, nil
+}
+
+// TypeAndSourceString returns the attestation type and source name for debugging
+func (r Request) TypeAndSourceString() string {
+	attType, err := r.AttestationType()
+	attTypeString := "unknown_type"
+	if err == nil {
+		attTypeString = utils.Bytes32ToString(attType)
+	}
+
+	source, err := r.Source()
+	sourceString := "unknown_source"
+	if err == nil {
+		sourceString = utils.Bytes32ToString(source)
+	}
+
+	return fmt.Sprintf("%s/%s", attTypeString, sourceString)
 }
 
 // MIC returns Message Integrity code of the request (the third 32 bytes).

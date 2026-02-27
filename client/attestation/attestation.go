@@ -1,20 +1,20 @@
 package attestation
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
 	"sync"
 
+	"github.com/flare-foundation/fdc-client/client/utils"
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/fdchub"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/events"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/priority"
+	"github.com/pkg/errors"
 
 	bitvotes "github.com/flare-foundation/fdc-client/client/attestation/bitVotes"
 	"github.com/flare-foundation/fdc-client/client/config"
@@ -175,18 +175,18 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("handle, resolve request: %s", err)
+		return errors.Wrap(err, "unable to resolve attestation request")
 	}
 	if !confirmed {
 		a.Status = Unconfirmed
-		logger.Debugf("unconfirmed request: ")
+		logger.Debugf("attestation request %s for round %d successfully verified but not confirmed", a.Request.TypeAndSourceString(), a.RoundID)
 		return nil
 	}
 
 	a.Response = responseBytes
 	err = a.validateResponse()
 	if err != nil {
-		return fmt.Errorf("handle, validate response: %s", err)
+		return errors.Wrap(err, "unable to validate attestation response")
 	}
 
 	return nil
@@ -209,7 +209,7 @@ func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationT
 	attestationTypeConfig, ok := attestationTypesConfigs[attType]
 	if !ok {
 		a.Status = UnsupportedPair
-		return fmt.Errorf("prepare request: no configs for: %s", string(bytes.Trim(attType[:], "\x00")))
+		return fmt.Errorf("prepare request: no configs for: %s", utils.Bytes32ToString(attType))
 	}
 
 	a.ResponseABI = &attestationTypeConfig.ResponseArguments
@@ -218,7 +218,7 @@ func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationT
 	sourceConfig, ok := attestationTypeConfig.SourcesConfig[source]
 	if !ok {
 		a.Status = UnsupportedPair
-		return fmt.Errorf("prepare request: no configs for: %s, %s", string(bytes.Trim(attType[:], "\x00")), string(bytes.Trim(source[:], "\x00")))
+		return fmt.Errorf("prepare request: no configs for: %s, %s", utils.Bytes32ToString(attType), utils.Bytes32ToString(source))
 	}
 
 	a.LUTLimit = sourceConfig.LUTLimit

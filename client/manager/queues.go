@@ -7,6 +7,7 @@ import (
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/priority"
+	"github.com/pkg/errors"
 )
 
 type attestationQueue = priority.PriorityQueue[*attestation.Attestation, attestation.Weight]
@@ -28,7 +29,13 @@ func buildQueues(queuesConfigs config.Queues) attestationQueues {
 
 // handler handles dequeued attestation.
 func handler(ctx context.Context, at *attestation.Attestation) error {
-	return at.Handle(ctx)
+	err := at.Handle(ctx)
+	if err != nil {
+		wrapped := errors.Wrapf(err, "attestation request %s for round %d failed", at.Request.TypeAndSourceString(), at.RoundID)
+		logger.Info(wrapped.Error())
+		return wrapped
+	}
+	return nil
 }
 
 // discard discards requests that do not need to be handled.

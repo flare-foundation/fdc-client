@@ -1,5 +1,9 @@
 package utils
 
+import (
+	"bytes"
+)
+
 // prepend places the element at the beginning of the slice and moves the potentially replaced element to the end.
 func Prepend[T any](slice []T, element T) []T {
 	if len(slice) == 0 {
@@ -37,4 +41,8 @@ func Invert[K comparable, V comparable](m map[K]V) map[V]K {
 	}
 
 	return invertedMap
+}
+
+func Bytes32ToString(b [32]byte) string {
+	return string(bytes.Trim(b[:], "\x00"))
 }

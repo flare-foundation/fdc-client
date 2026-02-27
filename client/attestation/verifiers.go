@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const timeout = 5 * time.Second    // maximal duration for the verifier to resolve the query
@@ -40,19 +42,19 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	encodedBody, err := json.Marshal(payload)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "failed to encode request body")
 	}
 
 	request, err := http.NewRequestWithContext(ctx, "POST", att.Credentials.URL, bytes.NewBuffer(encodedBody))
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "failed to create http request")
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-API-KEY", att.Credentials.apiKey)
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "failed to send http request")
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, false, fmt.Errorf("request responded with code %d", resp.StatusCode)
@@ -69,7 +71,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	err = decoder.Decode(&responseBody)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "failed to decode response body")
 	}
 	if responseBody.Status != ValidResponseStatus {
 		return nil, false, nil
@@ -77,7 +79,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	responseBytes, err := hex.DecodeString(strings.TrimPrefix(responseBody.ABIEncodedResponse, "0x"))
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrap(err, "failed to decode ABI encoded response")
 	}
 
 	return responseBytes, true, nil

@@ -155,7 +155,7 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 	for i := range r.Attestations {
 		if r.Attestations[i].Consensus {
 			if r.Attestations[i].Status != attestation.Success {
-				return merkle.Tree{}, errors.Errorf("attestation %d in consensus but not confirmed", i)
+				return merkle.Tree{}, errors.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
 			}
 
 			hashes = append(hashes, r.Attestations[i].Hash)
