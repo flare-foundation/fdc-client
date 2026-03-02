@@ -23,7 +23,7 @@ It does the following tasks:
 
 The client has no direct interactions with the Flare blockchain/node. The data is read through C-Chain indexer and submitted through Flare System Client.
 
-[![API Reference](https://pkg.go.dev/badge/github.com/flare-foundation/fdc-client)](https://pkg.go.dev/github.com/flare-foundation/fdc-client?tab=doc)
+[![API Reference](https://pkg.go.dev/badge/github.com/flare-foundation/fdc-client)](https://pkg.go.dev/github.com/flare-foundation/fdc-client@v1.2.6)
 
 ## Protocol
 
