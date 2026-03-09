@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.2.6](https://github.com/flare-foundation/fdc-client/tree/v1.2.6) - 2026-3-?
+## [v1.2.6](https://github.com/flare-foundation/fdc-client/tree/v1.2.6) - 2026-3-9
 
 ### Added
 
