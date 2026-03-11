@@ -2,14 +2,14 @@ package server
 
 import (
 	"encoding/hex"
-	"fmt"
+	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
-	"github.com/flare-foundation/go-flare-common/pkg/restserver"
 	"github.com/flare-foundation/go-flare-common/pkg/storage"
 
 	"github.com/flare-foundation/fdc-client/client/round"
@@ -18,6 +18,7 @@ import (
 
 const hexPrefix = "0x"
 
+// FDCProtocolProviderController handles FSP protocol endpoints.
 type FDCProtocolProviderController struct {
 	rounds     *storage.Cyclic[uint32, *round.Round]
 	protocolID uint8
@@ -41,90 +42,80 @@ func validateEVMAddress(address string) bool {
 	if err != nil {
 		return false
 	}
-	if len(dec) != 20 {
-		return false
-	}
-	return true
+	return len(dec) == 20
 }
 
-func validateSubmitXParams(params map[string]string) (submitXParams, error) {
-	if _, ok := params["votingRoundID"]; !ok {
-		return submitXParams{}, fmt.Errorf("missing votingRound param")
+func validateSubmitXParams(r *http.Request) (submitXParams, error) {
+	vrStr := r.PathValue("votingRoundID")
+	if vrStr == "" {
+		return submitXParams{}, errors.New("missing votingRound param")
 	}
-	votingRoundID, err := strconv.ParseUint(params["votingRoundID"], 10, 32)
+	votingRoundID, err := strconv.ParseUint(vrStr, 10, 32)
 	if err != nil {
-		return submitXParams{}, fmt.Errorf("votingRound param is not a number")
+		return submitXParams{}, errors.New("votingRound param is not a number")
 	}
 
-	if _, ok := params["submitAddress"]; !ok {
-		return submitXParams{}, fmt.Errorf("missing submitAddress param")
+	addr := r.PathValue("submitAddress")
+	if addr == "" {
+		return submitXParams{}, errors.New("missing submitAddress param")
 	}
-	submitAddress := params["submitAddress"]
-	if !validateEVMAddress(submitAddress) {
-		return submitXParams{}, fmt.Errorf("submitAddress param is not a valid EVM address")
+	if !validateEVMAddress(addr) {
+		return submitXParams{}, errors.New("submitAddress param is not a valid EVM address")
 	}
 
-	return submitXParams{votingRoundID: uint32(votingRoundID), submitAddress: submitAddress}, nil
+	return submitXParams{votingRoundID: uint32(votingRoundID), submitAddress: addr}, nil
 }
 
-func submitXController(
-	params map[string]string,
+func handleSubmitX(
+	w http.ResponseWriter,
+	r *http.Request,
 	service func(uint32, string) (string, bool, error),
 	timeLock func(uint32) uint64,
-) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	pathParams, err := validateSubmitXParams(params)
-
+) {
+	params, err := validateSubmitXParams(r)
 	if err != nil {
 		logger.Error(err)
-		return payload.SubprotocolResponse{}, restserver.BadParamsErrorHandler(err)
+		http.Error(w, "Error with params: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	atTheEarliest := timeLock(pathParams.votingRoundID)
+	earliest := timeLock(params.votingRoundID)
 	now := uint64(time.Now().Unix())
-	if atTheEarliest > now {
-		return payload.SubprotocolResponse{}, restserver.ToEarlyErrorHandler(fmt.Errorf("too early %v before %d", atTheEarliest-now, atTheEarliest))
+	if earliest > now {
+		http.Error(w, "request to early", http.StatusBadRequest)
+		return
 	}
 
-	rsp, exists, err := service(pathParams.votingRoundID, pathParams.submitAddress)
+	rsp, exists, err := service(params.votingRoundID, params.submitAddress)
 	if err != nil {
 		logger.Error(err)
-		return payload.SubprotocolResponse{}, restserver.InternalServerErrorHandler(err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 	if !exists {
-		return payload.SubprotocolResponse{Data: hexPrefix, Status: payload.Empty}, nil
+		writeJSON(w, payload.SubprotocolResponse{Data: hexPrefix, Status: payload.Empty})
+		return
 	}
 
-	response := payload.SubprotocolResponse{Data: rsp, Status: payload.Ok}
-	return response, nil
+	writeJSON(w, payload.SubprotocolResponse{Data: rsp, Status: payload.Ok})
 }
 
-func (c *FDCProtocolProviderController) submit1Controller(
-	params map[string]string,
-	_ any,
-	_ any,
-) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	return submitXController(params, c.submit1Service, timing.RoundStartTS)
+func (c *FDCProtocolProviderController) submit1(w http.ResponseWriter, r *http.Request) {
+	handleSubmitX(w, r, c.submit1Service, timing.RoundStartTS)
 }
 
-func (c *FDCProtocolProviderController) submit2Controller(
-	params map[string]string,
-	_ any,
-	_ any,
-) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	return submitXController(params, c.submit2Service, timing.ChooseStartTS)
+func (c *FDCProtocolProviderController) submit2(w http.ResponseWriter, r *http.Request) {
+	handleSubmitX(w, r, c.submit2Service, timing.ChooseStartTS)
 }
 
-func (c *FDCProtocolProviderController) submitSignaturesController(
-	params map[string]string,
-	_ any,
-	_ any,
-) (payload.SubprotocolResponse, *restserver.ErrorHandler) {
-	pathParams, err := validateSubmitXParams(params)
+func (c *FDCProtocolProviderController) submitSignatures(w http.ResponseWriter, r *http.Request) {
+	params, err := validateSubmitXParams(r)
 	if err != nil {
 		logger.Error(err)
-		return payload.SubprotocolResponse{}, restserver.BadParamsErrorHandler(err)
+		http.Error(w, "Error with params: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	response := c.submitSignaturesService(pathParams.votingRoundID, pathParams.submitAddress)
-	return response, nil
+	response := c.submitSignaturesService(params.votingRoundID, params.submitAddress)
+	writeJSON(w, response)
 }
