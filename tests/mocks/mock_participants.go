@@ -73,7 +73,7 @@ func MockParticipants(systemConfig *config.System, participants []string, client
 			first = false
 		}
 
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			err = sendRequest(0, client, fdcHub, addresses[0], privateKeys[0], gasPrice, requestData)
 			if err != nil {
 				continue

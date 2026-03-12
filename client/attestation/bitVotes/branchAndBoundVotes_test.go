@@ -37,7 +37,7 @@ func TestBranchAndBoundProvidersFix(t *testing.T) {
 	}
 
 	fees := make([]*big.Int, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fees[j] = big.NewInt(1)
 	}
 
@@ -108,14 +108,14 @@ func TestBranchAndBoundProvidersRandom(t *testing.T) {
 	prob := 0.86
 
 	totalWeight := uint16(0)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		bitVote := randomBitVotes(numAttestations, prob)
 		weightedBitVotes[j] = bitVote
 		totalWeight += bitVote.Weight
 	}
 
 	fees := make([]*big.Int, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fees[j] = big.NewInt(1)
 	}
 

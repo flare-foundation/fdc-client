@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"sync/atomic"
 
 	"testing"
 	"time"
@@ -37,16 +36,9 @@ var (
 	funcSel            = [4]byte{1, 2, 3, 4}
 )
 
-var dbSeq atomic.Uint64
-
-// InMemoryDB opens an empty in-memory database.
-//
-// The name is suffixed per call: a shared-cache in-memory database lives as long as the process
-// holds a connection, so reusing a name leaks rows into the next -count run.
 func InMemoryDB(t *testing.T, name string) *gorm.DB {
 	t.Helper()
-
-	dsn := fmt.Sprintf("file:%s_%d?mode=memory&cache=shared", name, dbSeq.Add(1))
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", name)
 
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info),
@@ -55,16 +47,6 @@ func InMemoryDB(t *testing.T, name string) *gorm.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	t.Cleanup(func() {
-		sqlDB, err := db.DB()
-		if err != nil {
-			return
-		}
-
-		_ = sqlDB.Close() // the database is freed with its last connection
-	})
-
 	return db
 }
 

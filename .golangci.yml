@@ -21,6 +21,13 @@ linters:
     - unconvert
     - whitespace
 
+    - modernize
+    - thelper
+    - usestdlibvars
+    - usetesting
+    - predeclared
+    - prealloc
+
   settings:
     exhaustive:
       default-signifies-exhaustive: true

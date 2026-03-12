@@ -19,6 +19,7 @@ import (
 )
 
 func MockVerifierForTests(t *testing.T, port int, response string, testLog database.Log) {
+	t.Helper()
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
@@ -38,6 +39,7 @@ func MockVerifierForTests(t *testing.T, port int, response string, testLog datab
 }
 
 func MockResponseForTest(t *testing.T, writer http.ResponseWriter, request *http.Request, response string, testLog database.Log) {
+	t.Helper()
 	body, err := io.ReadAll(request.Body)
 	require.NoError(t, err)
 

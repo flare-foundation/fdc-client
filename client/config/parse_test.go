@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -40,11 +39,9 @@ func TestReadUserRaw(t *testing.T) {
 }
 
 func TestRead(t *testing.T) {
-	err := os.Setenv("DB_PORT", "3307")
-	require.NoError(t, err)
+	t.Setenv("DB_PORT", "3307")
 
-	err = os.Setenv("DB_PASSWORD", "veryStrongPassword")
-	require.NoError(t, err)
+	t.Setenv("DB_PASSWORD", "veryStrongPassword")
 
 	user, _, err := config.Read(UserFile, SystemDirectory)
 	require.NoError(t, err)

@@ -45,7 +45,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 		return nil, false, errors.Wrap(err, "failed to encode request body")
 	}
 
-	request, err := http.NewRequestWithContext(ctx, "POST", att.Credentials.URL, bytes.NewBuffer(encodedBody))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, att.Credentials.URL, bytes.NewBuffer(encodedBody))
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to create http request")
 	}

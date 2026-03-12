@@ -19,6 +19,8 @@ import (
 )
 
 func makeController(t *testing.T) server.DAController {
+	t.Helper()
+
 	rounds := storage.NewCyclic[uint32, *round.Round](10)
 
 	controller := server.DAController{Rounds: &rounds}

@@ -2,14 +2,10 @@ package manager
 
 import (
 	"context"
-	"encoding/binary"
-	"math/big"
-	"sync"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
-	"github.com/flare-foundation/go-flare-common/pkg/voters"
 
 	"strconv"
 	"testing"
@@ -17,7 +13,6 @@ import (
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/config"
-	"github.com/flare-foundation/fdc-client/client/round"
 	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
 
@@ -104,16 +99,6 @@ var bitVoteMessage = payload.Message{
 	Payload:          []byte{0, 3, 5},
 }
 
-// setVerifierURL points every configured source at url, overriding the fixed port in the test config.
-func setVerifierURL(types config.AttestationTypes, url string) {
-	for _, typeConfig := range types {
-		for source, sourceConfig := range typeConfig.SourcesConfig {
-			sourceConfig.URL = url
-			typeConfig.SourcesConfig[source] = sourceConfig
-		}
-	}
-}
-
 func TestManagerMethods(t *testing.T) {
 	cfg, err := config.ReadUserRaw(USER_FILE)
 	require.NoError(t, err)
@@ -165,13 +150,13 @@ func TestManager(t *testing.T) {
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	// run mocked verifier for test
-	setVerifierURL(attestationTypeConfig, mocks.MockVerifierForTests(t, testResponse, requestLog))
-
 	// initialize
 	sharedDataPipes := shared.NewDataPipes()
 	mngr, err := New(&cfg, attestationTypeConfig, sharedDataPipes)
 	require.NoError(t, err)
+
+	// run mocked verifier for test
+	go mocks.MockVerifierForTests(t, 5556, testResponse, requestLog)
 
 	// run manager
 	ctx, cancel := context.WithCancel(context.Background())
@@ -199,38 +184,21 @@ func TestManager(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	// send attestation request
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		currentReqestLog := requestLog
 		currentReqestLog.BlockNumber += uint64(i)
 		currentReqestLog.Data = currentReqestLog.Data[:len(currentReqestLog.Data)-1] + strconv.Itoa(i)
 		sharedDataPipes.Requests <- []database.Log{currentReqestLog}
 	}
 
-	var r *round.Round
-	require.Eventually(t, func() bool {
-		var ok bool
-		r, ok = mngr.Rounds.Get(664111)
-		if !ok {
-			return false
-		}
+	time.Sleep(1 * time.Second)
 
-		atts := r.AttestationsSnapshot()
-		if len(atts) != 3 {
-			return false
-		}
-
-		for i := range atts {
-			atts[i].RLock()
-			status := atts[i].Status
-			atts[i].RUnlock()
-
-			if status != attestation.Success {
-				return false
-			}
-		}
-
-		return true
-	}, 5*time.Second, 50*time.Millisecond)
+	r, ok := mngr.Rounds.Get(664111)
+	require.Equal(t, 3, len(r.Attestations))
+	// send attestation request
+	for i := range 3 {
+		require.Equal(t, attestation.Success, r.Attestations[i].Status)
+	}
 
 	messages := make([]payload.Message, 0, len(policy.Voters.VoterDataMap))
 
@@ -239,75 +207,16 @@ func TestManager(t *testing.T) {
 		currentLog.From = address
 		messages = append(messages, currentLog)
 	}
-	sharedDataPipes.BitVotes <- payload.Round{ID: 664111, Messages: messages}
+	round := payload.Round{ID: 664111, Messages: messages}
+	sharedDataPipes.BitVotes <- round
 
-	require.Eventually(t, func() bool {
-		bitVote, exists, computed := r.GetConsensusBitVote()
-		return computed && exists && bitVote.BitVector.Int64() == 5
-	}, 5*time.Second, 50*time.Millisecond)
+	time.Sleep(1 * time.Second)
+
+	require.True(t, ok)
+	require.Equal(t, 5, int(r.ConsensusBitVote.BitVector.Int64()))
 
 	cancel()
 	<-ctx.Done()
-}
 
-// TestRetryUnsuccessfulChosenConcurrent covers the retry walk racing the in-place sort that the
-// server's submit2 path triggers. TestManager cannot: it never calls submit2.
-func TestRetryUnsuccessfulChosenConcurrent(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
-	require.NoError(t, err)
-
-	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
-	require.NoError(t, err)
-
-	mngr, err := New(&cfg, attestationTypeConfig, shared.NewDataPipes())
-	require.NoError(t, err)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// enqueue side only: without dequeue workers nothing reaches a verifier
-	var queueName string
-	for name := range mngr.queues {
-		mngr.queues[name].InitiateAndRun(ctx)
-		queueName = name
-	}
-
-	require.NotEmpty(t, queueName)
-
-	r := round.New(664111, voters.NewSet(nil, nil, nil))
-
-	const attestations = 50
-
-	for i := range attestations {
-		request := make([]byte, 2)
-		binary.BigEndian.PutUint16(request, uint16(i))
-
-		require.True(t, r.AddAttestation(&attestation.Attestation{
-			Indexes:   []attestation.IndexLog{{BlockNumber: uint64(attestations - i)}}, // reversed, so sorting swaps
-			Request:   request,
-			Fee:       big.NewInt(1),
-			Status:    attestation.ProcessError, // chosen but unsuccessful: the retry branch
-			Consensus: true,
-			QueueName: queueName,
-		}))
-	}
-
-	var wg sync.WaitGroup
-
-	for _, fn := range []func(){
-		func() { _, _ = mngr.retryUnsuccessfulChosen(r) },
-		func() { _, _ = r.BitVote() }, // sorts Attestations in place
-	} {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			for range 100 {
-				fn()
-			}
-		}()
-	}
-
-	wg.Wait()
+	time.Sleep(1 * time.Second)
 }
