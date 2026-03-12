@@ -26,6 +26,7 @@ func New(
 	rounds *storage.Cyclic[uint32, *round.Round],
 	protocolID uint8,
 	serverConfig config.RestServer,
+	status InfoSource,
 ) Server {
 	mux := http.NewServeMux()
 
@@ -51,6 +52,9 @@ func New(
 	daCtrl := DAController{Rounds: rounds}
 	mux.Handle(fmt.Sprintf("GET %s/getRequests/{votingRoundID}", da), auth(daCtrl.getRequests))
 	mux.Handle(fmt.Sprintf("GET %s/getAttestations/{votingRoundID}", da), auth(daCtrl.getAttestations))
+
+	ic := &infoController{source: status}
+	mux.Handle("GET /info", auth(ic.info))
 
 	srv := &http.Server{
 		Handler:           corsMiddleware(mux),

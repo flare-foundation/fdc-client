@@ -18,6 +18,7 @@ import (
 	bitvotes "github.com/flare-foundation/fdc-client/client/attestation/bitVotes"
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/round"
+	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/server"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
 
@@ -49,7 +50,7 @@ func TestServer(t *testing.T) {
 		APIKeys:     []string{"12345", "123456"},
 	}
 
-	s := server.New(&rounds, 200, serverConfig)
+	s := server.New(&rounds, 200, serverConfig, shared.NewStatus())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

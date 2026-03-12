@@ -42,7 +42,7 @@ type WeightedBitVote struct {
 
 // EncodeBitVote encodes BitVote.
 func (b BitVote) EncodeBitVote() []byte {
-	encoding := make([]byte, 2)
+	encoding := make([]byte, 2, 2+len(b.BitVector.Bytes()))
 	binary.BigEndian.PutUint16(encoding, b.Length)
 
 	encoding = append(encoding, b.BitVector.Bytes()...)

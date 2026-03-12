@@ -34,7 +34,7 @@ See [whitepaper](https://dev.flare.network/pdf/whitepapers/20240224-FlareDataCon
 | Method | Endpoint   | Description                                            |
 | ------ | ---------- | ------------------------------------------------------ |
 | GET    | `/health`  | Returns 200 if healthy.                                |
-|        | `/api-doc` | Swagger. The endpoint is [configurable](#rest-server). |
+| GET    | `/info`    | Returns client status. See [Info](#info).               |
 
 ### FSP
 
@@ -54,7 +54,24 @@ The path component /fsp is [configurable](#rest-server).
 | GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting. round.                                                                                             |
 | GET    | `/fsp/submitSignatures/{votingRoundID}/{submitAddress}` | Returns message for voting as data and consensus bit-vote as additional data. If data has not been assembled yet no data with status "RETRY" is returned. If data cannot be assembled status "EMPTY is returned. |
 
-## DA
+### Info
+
+| Method | Endpoint | Description                                                                  |
+| ------ | -------- | ---------------------------------------------------------------------------- |
+| GET    | `/info`  | Returns client status: stored round range, signing policies, current epoch. |
+
+The endpoint is API key protected.
+Returns a JSON with fields:
+
+- `hasRounds` - whether any voting rounds are stored
+- `oldestRound` - ID of the oldest stored voting round
+- `newestRound` - ID of the newest stored voting round
+- `currentEpoch` - reward epoch ID of the latest signing policy
+- `roundBufferSize` - maximum number of rounds kept in memory
+- `signingPolicies` - list of stored signing policies with `rewardEpochID`, `startVotingRoundID`, and `voterCount`
+- `serverTime` - server unix timestamp
+
+### DA
 
 Endpoints for Data Availability layer.
 

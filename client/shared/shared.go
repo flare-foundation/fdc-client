@@ -14,7 +14,7 @@ const (
 	bitVoteBufferSize           = 2
 	requestsBufferSize          = 10
 	signingPolicyBufferSize     = 3
-	roundBuffer             int = 256
+	RoundBufferSize         int = 256
 )
 
 type VotersData struct {
@@ -27,18 +27,20 @@ type VotersData struct {
 //   - Rounds are shared between manager and server
 //   - Channels are shared between collector (send to) and manager (receive from)
 type DataPipes struct {
-	Rounds   storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer roundBuffer.
+	Rounds   storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer RoundBufferSize.
 	Requests chan []database.Log
 	BitVotes chan payload.Round
 	Voters   chan []VotersData
+	Status   *Status
 }
 
 // NewDataPipes created new DataPipes.
 func NewDataPipes() *DataPipes {
 	return &DataPipes{
-		Rounds:   storage.NewCyclic[uint32, *round.Round](roundBuffer),
+		Rounds:   storage.NewCyclic[uint32, *round.Round](RoundBufferSize),
 		Voters:   make(chan []VotersData, signingPolicyBufferSize),
 		BitVotes: make(chan payload.Round, bitVoteBufferSize),
 		Requests: make(chan []database.Log, requestsBufferSize),
+		Status:   NewStatus(),
 	}
 }

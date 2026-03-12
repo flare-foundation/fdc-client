@@ -20,7 +20,7 @@ import (
 )
 
 type Manager struct {
-	Rounds                storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer roundBuffer.
+	Rounds                storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer RoundBufferSize.
 	lastRoundCreated      uint32
 	requests              <-chan []database.Log
 	bitVotes              <-chan payload.Round
@@ -28,6 +28,7 @@ type Manager struct {
 	signingPolicyStorage  *policy.Storage
 	attestationTypeConfig config.AttestationTypes
 	queues                attestationQueues
+	status                *shared.Status
 }
 
 // New initializes attestation round manager from raw user configurations.
@@ -44,6 +45,7 @@ func New(configs *config.UserRaw, attestationTypeConfig config.AttestationTypes,
 			signingPolicies:       sharedDataPipes.Voters,
 			bitVotes:              sharedDataPipes.BitVotes,
 			requests:              sharedDataPipes.Requests,
+			status:                sharedDataPipes.Status,
 		},
 		nil
 }
@@ -96,6 +98,8 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			for j := range deleted {
 				logger.Debugf("deleted signing policy for epoch %d", deleted[j])
 			}
+
+			m.status.PrunePolicies(deleted)
 
 		case bvsForRound := <-m.bitVotes:
 			for i := range bvsForRound.Messages {
@@ -162,6 +166,7 @@ func (m *Manager) GetOrCreateRound(roundID uint32) (*round.Round, error) {
 	logger.Infof("Round %d created", roundID)
 
 	m.Rounds.Store(roundID, roundForID)
+	m.status.UpdateRound(roundID)
 	return roundForID, nil
 }
 
@@ -223,8 +228,17 @@ func (m *Manager) OnSigningPolicy(data shared.VotersData) error {
 	logger.Infof("Processing signing policy for rewardEpoch %s", data.Policy.RewardEpochId.String())
 
 	err = m.signingPolicyStorage.Add(parsedPolicy)
+	if err != nil {
+		return err
+	}
 
-	return err
+	m.status.AddPolicy(shared.SigningPolicySummary{
+		RewardEpochID:      parsedPolicy.RewardEpochID,
+		StartVotingRoundID: parsedPolicy.StartVotingRoundID,
+		VoterCount:         len(data.Policy.Voters),
+	})
+
+	return nil
 }
 
 // VotersDataCheck checks consistency of votersData.

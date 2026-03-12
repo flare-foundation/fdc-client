@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- API-key-protected `GET /info` endpoint that returns client status: oldest/newest stored voting round, current epoch, signing policy summaries, and round buffer size.
+
 ### Changed
 
 - Go 1.25.13, clearing the standard library vulnerabilities reported by govulncheck.
