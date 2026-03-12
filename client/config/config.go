@@ -47,8 +47,8 @@ type RestServer struct {
 	DATitle    string `toml:"da_sub_router_title"`
 	DAPSubpath string `toml:"da_sub_router_path"`
 
-	Version     string `toml:"version"`
-	SwaggerPath string `toml:"swagger_path"`
+	Version    string `toml:"version"`
+	CORSOrigin string `toml:"cors_origin"`
 }
 
 type Addresses struct {

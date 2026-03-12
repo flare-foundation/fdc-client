@@ -258,7 +258,7 @@ func TestGetAttestationsHandler(t *testing.T) {
 }
 
 func TestAPIKeyMiddleware(t *testing.T) {
-	keys := map[string]bool{"valid-key": true}
+	keys := []string{"valid-key"}
 	handler := apiKeyMiddleware("X-API-KEY", keys, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -287,20 +287,23 @@ func TestAPIKeyMiddleware(t *testing.T) {
 }
 
 func TestCORSMiddleware(t *testing.T) {
-	handler := corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}))
+	})
 
-	t.Run("GET sets CORS headers", func(t *testing.T) {
+	t.Run("GET sets security header", func(t *testing.T) {
+		handler := corsMiddleware("*", inner)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/test", nil)
 		handler.ServeHTTP(w, r)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
+		assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
 	})
 
 	t.Run("OPTIONS preflight returns 204", func(t *testing.T) {
+		handler := corsMiddleware("*", inner)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodOptions, "/test", nil)
 		handler.ServeHTTP(w, r)
@@ -309,5 +312,16 @@ func TestCORSMiddleware(t *testing.T) {
 		assert.Equal(t, "*", w.Header().Get("Access-Control-Allow-Origin"))
 		assert.NotEmpty(t, w.Header().Get("Access-Control-Allow-Methods"))
 		assert.NotEmpty(t, w.Header().Get("Access-Control-Allow-Headers"))
+	})
+
+	t.Run("empty origin skips CORS headers", func(t *testing.T) {
+		handler := corsMiddleware("", inner)
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+		handler.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Empty(t, w.Header().Get("Access-Control-Allow-Origin"))
+		assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
 	})
 }

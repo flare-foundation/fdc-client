@@ -163,7 +163,7 @@ func tryTriggerBitVote(
 	if currentBlockTime >= *nextChoosePhaseEndTimestamp {
 		logMsg = "on-chain"
 		isTriggered = true
-	} else if (now - bitVoteOffChainTriggerSeconds) > *nextChoosePhaseEndTimestamp {
+	} else if now > *nextChoosePhaseEndTimestamp+bitVoteOffChainTriggerSeconds {
 		logMsg = "off-chain"
 		isTriggered = true
 	}

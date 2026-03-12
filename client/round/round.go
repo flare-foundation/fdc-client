@@ -152,9 +152,11 @@ func (r *Round) ComputeConsensusBitVote() error {
 	}
 
 	r.ConsensusBitVote = consensus
-	r.Status.Lock()
-	r.Status.Value = attestation.Consensus
-	r.Status.Unlock()
+	func() {
+		r.Status.Lock()
+		defer r.Status.Unlock()
+		r.Status.Value = attestation.Consensus
+	}()
 
 	return r.setConsensusStatus(consensus)
 }
@@ -184,9 +186,11 @@ func (r *Round) setConsensusStatus(consensusBitVote bitvotes.BitVote) error {
 	}
 
 	for i := range r.Attestations {
-		r.Attestations[i].Lock()
-		r.Attestations[i].Consensus = consensusBitVote.BitVector.Bit(i) == 1
-		r.Attestations[i].Unlock()
+		func() {
+			r.Attestations[i].Lock()
+			defer r.Attestations[i].Unlock()
+			r.Attestations[i].Consensus = consensusBitVote.BitVector.Bit(i) == 1
+		}()
 	}
 
 	return nil
@@ -201,23 +205,33 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 
 	var hashes []common.Hash
 	for i := range r.Attestations {
-		r.Attestations[i].RLock()
-		defer r.Attestations[i].RUnlock()
+		hash, consensus, ok, err := func() (common.Hash, bool, bool, error) {
+			r.Attestations[i].RLock()
+			defer r.Attestations[i].RUnlock()
 
-		if r.Attestations[i].Consensus {
-			if r.Attestations[i].Status != attestation.Success {
-				return merkle.Tree{}, errors.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
+			if !r.Attestations[i].Consensus {
+				return common.Hash{}, false, true, nil
 			}
-
-			hashes = append(hashes, r.Attestations[i].Hash)
+			if r.Attestations[i].Status != attestation.Success {
+				return common.Hash{}, true, false, errors.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
+			}
+			return r.Attestations[i].Hash, true, true, nil
+		}()
+		if err != nil {
+			return merkle.Tree{}, err
+		}
+		if consensus && ok {
+			hashes = append(hashes, hash)
 		}
 	}
 
 	merkleTree := merkle.Build(hashes, false)
 	r.merkleTree = merkleTree
-	r.Status.Lock()
-	r.Status.Value = attestation.Done
-	r.Status.Unlock()
+	func() {
+		r.Status.Lock()
+		defer r.Status.Unlock()
+		r.Status.Value = attestation.Done
+	}()
 
 	return merkleTree, nil
 }

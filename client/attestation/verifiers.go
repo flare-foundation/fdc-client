@@ -56,13 +56,13 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to send http request")
 	}
+	defer resp.Body.Close() //nolint:errcheck // best-effort close of response body
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, false, fmt.Errorf("request responded with code %d", resp.StatusCode)
 	}
 
 	respLimited := &io.LimitedReader{R: resp.Body, N: maxRespSize}
-	// close response body after function ends
-	defer resp.Body.Close() //nolint:errcheck
 
 	responseBody := ABIEncodedResponseBody{}
 

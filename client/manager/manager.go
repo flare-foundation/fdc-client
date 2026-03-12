@@ -56,7 +56,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	// without a signing policy.
 	var signingPolicies []shared.VotersData
 
-	runQueues(ctx, m.queues) // synchronous: queues must be initiated before the first Add below
+	go runQueues(ctx, m.queues)
 
 	select {
 	case signingPolicies = <-m.signingPolicies:
@@ -259,26 +259,24 @@ func VotersDataCheck(data shared.VotersData) error {
 func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 	count := 0 // only for logging
 
-	// snapshot: sortAttestations reorders the slice in place, and the server can trigger it
-	atts := round.AttestationsSnapshot()
-
-	for i := range atts {
+	for i := range round.Attestations {
 		err := func() error {
-			atts[i].RLock()
-			defer atts[i].RUnlock()
+			round.Attestations[i].RLock()
+			defer round.Attestations[i].RUnlock()
 
-			if !atts[i].Consensus || atts[i].Status == attestation.Success {
-				return nil
+			if round.Attestations[i].Consensus && round.Attestations[i].Status != attestation.Success {
+				queueName := round.Attestations[i].QueueName
+
+				queue, ok := m.queues[queueName]
+				if !ok {
+					return fmt.Errorf("retry: no queue: %s", queueName)
+				}
+
+				weight := attestation.Weight{Index: round.Attestations[i].Index()}
+				queue.AddFast(round.Attestations[i], weight)
+
+				count++
 			}
-
-			queue, ok := m.queues[atts[i].QueueName]
-			if !ok {
-				return fmt.Errorf("retry: no queue: %s", atts[i].QueueName)
-			}
-
-			queue.AddFast(atts[i], attestation.Weight{Index: atts[i].Index()})
-			count++
-
 			return nil
 		}()
 		if err != nil {

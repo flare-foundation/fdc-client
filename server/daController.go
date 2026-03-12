@@ -46,7 +46,7 @@ func (c *DAController) getRequests(w http.ResponseWriter, r *http.Request) {
 	votingRoundID, err := validateRoundIDParam(r)
 	if err != nil {
 		logger.Error(err)
-		http.Error(w, "Error with params: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request parameters", http.StatusBadRequest)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (c *DAController) getAttestations(w http.ResponseWriter, r *http.Request) {
 	votingRoundID, err := validateRoundIDParam(r)
 	if err != nil {
 		logger.Error(err)
-		http.Error(w, "Error with params: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request parameters", http.StatusBadRequest)
 		return
 	}
 

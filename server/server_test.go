@@ -40,14 +40,13 @@ const (
 func TestServer(t *testing.T) {
 	rounds := storage.NewCyclic[uint32, *round.Round](10)
 	serverConfig := config.RestServer{
-		Title:       "FDC protocol data provider API",
-		FSPTitle:    "FDC protocol data provider for FSP client",
-		FSPSubpath:  "/fsp",
-		Version:     "0.0.0",
-		SwaggerPath: "/api-doc",
-		Addr:        "localhost:8080",
-		APIKeyName:  "X-API-KEY",
-		APIKeys:     []string{"12345", "123456"},
+		Title:      "FDC protocol data provider API",
+		FSPTitle:   "FDC protocol data provider for FSP client",
+		FSPSubpath: "/fsp",
+		Version:    "0.0.0",
+		Addr:       "localhost:8080",
+		APIKeyName: "X-API-KEY",
+		APIKeys:    []string{"12345", "123456"},
 	}
 
 	s := server.New(&rounds, 200, serverConfig, shared.NewStatus())
