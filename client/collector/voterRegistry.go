@@ -18,9 +18,13 @@ import (
 	"gorm.io/gorm"
 )
 
-const breakingEpochCoston = 4506
 const (
-	newRegistryCoston = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
+	breakingEpochCoston  = 4506
+	breakingEpochCoston2 = 5338
+)
+const (
+	newRegistryCoston  = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
+	newRegistryCoston2 = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
 
 	oldRegistryCoston   = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
 	oldRegistrySongbird = "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D"
@@ -139,6 +143,8 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 
 	if rewardEpochID <= breakingEpochCoston && registryContractAddress == common.HexToAddress(newRegistryCoston) {
 		registryContractAddress = common.HexToAddress(oldRegistryCoston)
+	} else if rewardEpochID <= breakingEpochCoston2 && registryContractAddress == common.HexToAddress(newRegistryCoston2) {
+		registryContractAddress = common.HexToAddress(oldRegistryCoston2)
 	}
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
