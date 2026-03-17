@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		logger.Panicf("failed to create the manager: %s", err)
 	}
-	go mngr.Run(ctx)
+	go mngr.Run(ctx, cancel)
 
 	// Run attestation client server
 	srv := server.New(&sharedDataPipes.Rounds, userConfigRaw.ProtocolID, userConfigRaw.RestServer)

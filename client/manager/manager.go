@@ -51,7 +51,7 @@ func New(configs *config.UserRaw, attestationTypeConfig config.AttestationTypes,
 }
 
 // Run starts processing data received through the manager's channels.
-func (m *Manager) Run(ctx context.Context) {
+func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	// Get signing policy first as we cannot process any other message types
 	// without a signing policy.
 	var signingPolicies []shared.VotersData
@@ -82,6 +82,14 @@ func (m *Manager) Run(ctx context.Context) {
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
 					logger.Error("signing policy error:", err)
+					shutdownTime := time.Unix(int64(timing.RoundStartTS(signingPolicies[i].Policy.StartVotingRoundId+1)), 0)
+					logger.Infof("scheduling shutdown at %v", shutdownTime)
+					logger.Infof("shutdown after reward epoch %d after the end of voting round %d", signingPolicies[i].Policy.RewardEpochId, signingPolicies[i].Policy.StartVotingRoundId-1)
+					go func(cancel context.CancelFunc, deadline time.Time) {
+						time.Sleep(time.Until(deadline))
+						logger.Errorf("shutting down due to an error in signing policy")
+						cancel()
+					}(cancel, shutdownTime)
 				}
 			}
 			deleted := m.signingPolicyStorage.RemoveBefore(m.lastRoundCreated) // delete all signing policies that have already ended

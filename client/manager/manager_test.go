@@ -161,7 +161,7 @@ func TestManager(t *testing.T) {
 
 	// run manager
 	ctx, cancel := context.WithCancel(context.Background())
-	go mngr.Run(ctx)
+	go mngr.Run(ctx, cancel)
 
 	time.Sleep(1 * time.Second)
 
