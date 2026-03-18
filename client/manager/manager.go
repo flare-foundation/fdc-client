@@ -85,11 +85,11 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 					shutdownTime := time.Unix(int64(timing.RoundStartTS(signingPolicies[i].Policy.StartVotingRoundId+1)), 0)
 					logger.Infof("scheduling shutdown at %v", shutdownTime)
 					logger.Infof("shutdown after reward epoch %d after the end of voting round %d", signingPolicies[i].Policy.RewardEpochId, signingPolicies[i].Policy.StartVotingRoundId-1)
-					go func(cancel context.CancelFunc, deadline time.Time) {
+					go func(cancel context.CancelFunc, deadline time.Time, err error) {
 						time.Sleep(time.Until(deadline))
-						logger.Errorf("shutting down due to an error in signing policy")
+						logger.Errorf("shutting down due to an error in signing policy: %v", err)
 						cancel()
-					}(cancel, shutdownTime)
+					}(cancel, shutdownTime, err)
 				}
 			}
 			deleted := m.signingPolicyStorage.RemoveBefore(m.lastRoundCreated) // delete all signing policies that have already ended
