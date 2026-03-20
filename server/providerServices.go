@@ -47,7 +47,7 @@ func (c *FDCProtocolProviderController) submitSignaturesService(roundID uint32, 
 		return payload.SubprotocolResponse{Status: payload.Retry}
 	}
 	if !exists {
-		logger.Infof("submitSignatures: consensus bitVote for round %d not available: %s", roundID)
+		logger.Infof("submitSignatures: consensus bitVote for round %d not available", roundID)
 		return payload.SubprotocolResponse{Status: payload.Empty}
 	}
 

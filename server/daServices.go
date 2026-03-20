@@ -10,23 +10,21 @@ import (
 )
 
 func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
-	round, exists := c.Rounds.Get(roundId)
+	round, exists := c.rounds.Get(roundId)
 	if !exists {
 		return nil, false
 	}
 
-	attestations, indexes := round.AttestationsWithIndexes()
-	requests := make([]DARequest, len(attestations))
+	requests := make([]DARequest, len(round.Attestations))
 
-	for i := range attestations {
-		requests[i] = AttestationToDARequest(attestations[i], indexes[i])
+	for i := range round.Attestations {
+		requests[i] = AttestationToDARequest(round.Attestations[i])
 	}
 
 	return requests, true
 }
 
-// indexes must come from Round.AttestationsWithIndexes — att.Indexes is guarded by the round lock.
-func AttestationToDARequest(att *attestation.Attestation, indexes []attestation.IndexLog) DARequest {
+func AttestationToDARequest(att *attestation.Attestation) DARequest {
 	att.RLock()
 	defer att.RUnlock()
 
@@ -48,34 +46,27 @@ func AttestationToDARequest(att *attestation.Attestation, indexes []attestation.
 		Response:  hex.EncodeToString(att.Response),
 		Status:    status,
 		Consensus: att.Consensus,
-		Indexes:   indexes,
+		Indexes:   att.Indexes,
 	}
 
 	return dARequest
 }
 
 func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
-	round, exists := c.Rounds.Get(roundId)
+	round, exists := c.rounds.Get(roundId)
 	if !exists {
 		return nil, false
 	}
 
-	// gate as submitSignaturesService does: MerkleTree is a write path that flips the round to
-	// Done, so an externally timed pre-consensus query must not reach it
-	if _, ok, computed := round.GetConsensusBitVote(); !computed || !ok {
-		return nil, false
-	}
-
-	merkleTree, err := round.MerkleTreeCached()
+	merkleTree, err := round.MerkleTree()
 	if err != nil {
 		return nil, false
 	}
 
-	snapshot := round.AttestationsSnapshot()
-	attestations := make([]DAAttestation, 0, len(snapshot))
+	attestations := make([]DAAttestation, 0, len(round.Attestations))
 
-	for i := range snapshot {
-		att, ok, err := attestationToDAAttestation(snapshot[i])
+	for i := range round.Attestations {
+		att, ok, err := attestationToDAAttestation(round.Attestations[i])
 		if err != nil {
 			return nil, false
 		}
@@ -106,6 +97,10 @@ func attestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bo
 		return DAAttestation{}, false, nil
 	}
 
+	if att.ResponseABIString == nil {
+		return DAAttestation{}, false, fmt.Errorf("missing ResponseABIString for request %s in round %d", hex.EncodeToString(att.Request), att.RoundID)
+	}
+
 	dAAttestation := DAAttestation{
 		RoundID:     att.RoundID,
 		Request:     hex.EncodeToString(att.Request),
@@ -117,10 +112,10 @@ func attestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bo
 	return dAAttestation, true, nil
 }
 
-func (DAAtt *DAAttestation) addProof(tree merkle.Tree) error {
-	proofCommon, err := tree.GetProofFromHash(DAAtt.hash)
+func (a *DAAttestation) addProof(tree merkle.Tree) error {
+	proofCommon, err := tree.GetProofFromHash(a.hash)
 	if err != nil {
-		return fmt.Errorf("no proof for request %s in round %d", DAAtt.Request, DAAtt.RoundID)
+		return fmt.Errorf("no proof for request %s in round %d", a.Request, a.RoundID)
 	}
 
 	proof := make([]string, len(proofCommon))
@@ -129,7 +124,7 @@ func (DAAtt *DAAttestation) addProof(tree merkle.Tree) error {
 		proof[i] = proofCommon[i].Hex()
 	}
 
-	DAAtt.Proof = proof
+	a.Proof = proof
 
 	return nil
 }

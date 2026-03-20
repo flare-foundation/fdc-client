@@ -94,7 +94,7 @@ func TestHandleSubmitXTooEarly(t *testing.T) {
 	handleSubmitX(w, r, okService, futureTimeLock)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "request to early")
+	assert.Contains(t, w.Body.String(), "request too early")
 }
 
 func TestHandleSubmitXServiceError(t *testing.T) {
@@ -167,7 +167,7 @@ func makeDAController() DAController {
 		Hash:      common.HexToHash("0x123"),
 	})
 	rounds.Store(1, r)
-	return DAController{Rounds: &rounds}
+	return *NewDAController(&rounds)
 }
 
 func TestGetRequestsHandler(t *testing.T) {
@@ -292,7 +292,7 @@ func TestCORSMiddleware(t *testing.T) {
 	})
 
 	t.Run("GET sets security header", func(t *testing.T) {
-		handler := corsMiddleware("*", inner)
+		handler := corsMiddleware("*", "X-API-KEY", inner)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/test", nil)
 		handler.ServeHTTP(w, r)
@@ -303,7 +303,7 @@ func TestCORSMiddleware(t *testing.T) {
 	})
 
 	t.Run("OPTIONS preflight returns 204", func(t *testing.T) {
-		handler := corsMiddleware("*", inner)
+		handler := corsMiddleware("*", "X-API-KEY", inner)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodOptions, "/test", nil)
 		handler.ServeHTTP(w, r)
@@ -315,7 +315,7 @@ func TestCORSMiddleware(t *testing.T) {
 	})
 
 	t.Run("empty origin skips CORS headers", func(t *testing.T) {
-		handler := corsMiddleware("", inner)
+		handler := corsMiddleware("", "X-API-KEY", inner)
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest(http.MethodGet, "/test", nil)
 		handler.ServeHTTP(w, r)

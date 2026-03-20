@@ -13,7 +13,12 @@ import (
 
 // DAController handles data availability endpoints.
 type DAController struct {
-	Rounds *storage.Cyclic[uint32, *round.Round]
+	rounds *storage.Cyclic[uint32, *round.Round]
+}
+
+// NewDAController creates a new DAController.
+func NewDAController(rounds *storage.Cyclic[uint32, *round.Round]) *DAController {
+	return &DAController{rounds: rounds}
 }
 
 // RequestsResponse is the response for the getRequests endpoint.

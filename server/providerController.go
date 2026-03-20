@@ -82,7 +82,7 @@ func handleSubmitX(
 	earliest := timeLock(params.votingRoundID)
 	now := uint64(time.Now().Unix())
 	if earliest > now {
-		http.Error(w, "request to early", http.StatusBadRequest)
+		http.Error(w, "request too early", http.StatusBadRequest)
 		return
 	}
 

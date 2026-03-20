@@ -18,12 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeController(t *testing.T) server.DAController {
+func makeController(t *testing.T) *server.DAController {
 	t.Helper()
 
 	rounds := storage.NewCyclic[uint32, *round.Round](10)
 
-	controller := server.DAController{Rounds: &rounds}
+	controller := server.NewDAController(&rounds)
 
 	hash := common.HexToHash("0x232")
 

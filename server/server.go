@@ -46,7 +46,7 @@ func New(
 	mux.Handle(fmt.Sprintf("GET %s/submitSignatures/{votingRoundID}/{submitAddress}", fsp), auth(controller.submitSignatures))
 
 	da := serverConfig.DAPSubpath
-	daCtrl := DAController{Rounds: rounds}
+	daCtrl := NewDAController(rounds)
 	mux.Handle(fmt.Sprintf("GET %s/getRequests/{votingRoundID}", da), auth(daCtrl.getRequests))
 	mux.Handle(fmt.Sprintf("GET %s/getAttestations/{votingRoundID}", da), auth(daCtrl.getAttestations))
 
@@ -54,7 +54,7 @@ func New(
 	mux.Handle("GET /info", auth(ic.info))
 
 	srv := &http.Server{
-		Handler:           corsMiddleware(serverConfig.CORSOrigin, mux),
+		Handler:           corsMiddleware(serverConfig.CORSOrigin, serverConfig.APIKeyName, mux),
 		Addr:              serverConfig.Addr,
 		ReadHeaderTimeout: 15 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -105,20 +105,20 @@ func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Han
 			}
 		}
 		if !valid {
-			http.Error(w, fmt.Sprintf("Unauthorized, provide valid %s api key", keyName), http.StatusUnauthorized)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-func corsMiddleware(origin string, next http.Handler) http.Handler {
+func corsMiddleware(origin, keyName string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-KEY")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, "+keyName)
 			if r.Method == http.MethodOptions {
 				w.WriteHeader(http.StatusNoContent)
 				return
