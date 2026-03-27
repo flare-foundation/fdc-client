@@ -1,9 +1,9 @@
 package round
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
-	"slices"
 	"sort"
 	"sync"
 
@@ -38,12 +38,12 @@ type Round struct {
 
 // New returns a pointer to a new Round with id and voterSet.
 func New(id uint32, voterSet *voters.Set) *Round {
-	Status := new(attestation.RoundStatusMutex)
-	Status.Value = attestation.PreConsensus
+	status := new(attestation.RoundStatusMutex)
+	status.Value = attestation.PreConsensus
 
 	return &Round{
 		ID:                           id,
-		Status:                       Status,
+		Status:                       status,
 		voterSet:                     voterSet,
 		attestationMap:               make(map[common.Hash]*attestation.Attestation),
 		bitVoteCheckList:             make(map[common.Address]*bitvotes.WeightedBitVote),
@@ -78,33 +78,6 @@ func (r *Round) AddAttestation(attToAdd *attestation.Attestation) bool {
 	return true
 }
 
-// AttestationsSnapshot returns a copy of the attestations slice, so callers can iterate it
-// without racing AddAttestation's append or sortAttestations' in-place reorder.
-func (r *Round) AttestationsSnapshot() []*attestation.Attestation {
-	r.RLock()
-	defer r.RUnlock()
-
-	return slices.Clone(r.Attestations)
-}
-
-// AttestationsWithIndexes returns AttestationsSnapshot paired with copies of each attestation's
-// index logs.
-//
-// Indexes, like Fee, is guarded by the round lock rather than the attestation's own —
-// AddAttestation rewrites it when merging a duplicate. Copying it here keeps readers off that
-// path without AddAttestation having to take an attestation lock.
-func (r *Round) AttestationsWithIndexes() ([]*attestation.Attestation, [][]attestation.IndexLog) {
-	r.RLock()
-	defer r.RUnlock()
-
-	indexes := make([][]attestation.IndexLog, len(r.Attestations))
-	for i := range r.Attestations {
-		indexes[i] = slices.Clone(r.Attestations[i].Indexes)
-	}
-
-	return slices.Clone(r.Attestations), indexes
-}
-
 // sortAttestations sorts round's attestations according to their IndexLog.
 // We assume that attestations have at least one index.
 func (r *Round) sortAttestations() {
@@ -122,7 +95,7 @@ func (r *Round) BitVote() (bitvotes.BitVote, error) {
 	return attestation.BitVoteFromAttestations(r.Attestations)
 }
 
-// BitVoteHex returns the 0x prefixed hex string encoded BitVote for the round according to the current status of Attestations.
+// BitVoteBytes returns the encoded BitVote for the round according to the current status of Attestations.
 func (r *Round) BitVoteBytes() ([]byte, error) {
 	bitVote, err := r.BitVote()
 	if err != nil {
@@ -165,9 +138,6 @@ func (r *Round) ComputeConsensusBitVote() error {
 //   - bool indicating whether the consensus BitVote is successfully computed
 //   - bool indicating whether the consensus BitVote computation took place
 func (r *Round) GetConsensusBitVote() (bitvotes.BitVote, bool, bool) {
-	r.RLock()
-	defer r.RUnlock()
-
 	if r.ConsensusBitVote.BitVector == nil {
 		return bitvotes.BitVote{}, false, r.ConsensusCalculationFinished
 	}
@@ -181,7 +151,7 @@ func (r *Round) GetConsensusBitVote() (bitvotes.BitVote, bool, bool) {
 func (r *Round) setConsensusStatus(consensusBitVote bitvotes.BitVote) error {
 	// sanity check
 	if consensusBitVote.BitVector.BitLen() > len(r.Attestations) {
-		return fmt.Errorf("consensus bitVector too long %d", r.ID)
+		return fmt.Errorf("consensus bitVector too long: %d", r.ID)
 	}
 
 	for i := range r.Attestations {
@@ -237,15 +207,13 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 
 // MerkleTreeCached gets Merkle tree from cache if it is already computed or computes it.
 func (r *Round) MerkleTreeCached() (merkle.Tree, error) {
-	// read into a local: the cached tree must not be read after the RLock is dropped, and the
-	// lock must be dropped before r.MerkleTree takes it for writing
 	r.RLock()
-	cached := r.merkleTree
-	r.RUnlock()
 
-	if len(cached) != 0 {
-		return cached, nil
+	if len(r.merkleTree) != 0 {
+		r.RUnlock()
+		return r.merkleTree, nil
 	}
+	r.RUnlock() // cannot use defer. r.MerkleTree() uses r.Lock()
 
 	return r.MerkleTree()
 }
@@ -274,22 +242,22 @@ func (r *Round) ProcessBitVote(message payload.Message) error {
 	}
 
 	if bitVote.BitVector.BitLen() > len(r.Attestations) {
-		return fmt.Errorf("bitVector too long")
+		return errors.New("bitVector too long")
 	}
 
 	signingAddress, exists := r.voterSet.SubmitToSigningAddress[message.From] // message.From = submit address
 	if !exists {
-		return fmt.Errorf("no signing address")
+		return errors.New("no signing address")
 	}
 
 	voter, exists := r.voterSet.VoterDataMap[signingAddress]
 	if !exists {
-		return fmt.Errorf("invalid voter")
+		return errors.New("invalid voter")
 	}
 
 	weight := voter.Weight
 	if weight <= 0 {
-		return fmt.Errorf("zero weight voter")
+		return errors.New("zero weight voter")
 	}
 
 	// check if a bitVote was already submitted by the sender
@@ -307,7 +275,7 @@ func (r *Round) ProcessBitVote(message payload.Message) error {
 		}
 		r.bitVotes = append(r.bitVotes, weightedBitVote)
 		r.bitVoteCheckList[message.From] = weightedBitVote
-	} else if exists && bitvotes.EarlierTx(weightedBitVote.IndexTx, bitvotes.IndexTx{BlockNumber: message.BlockNumber, TransactionIndex: message.TransactionIndex}) {
+	} else if bitvotes.EarlierTx(weightedBitVote.IndexTx, bitvotes.IndexTx{BlockNumber: message.BlockNumber, TransactionIndex: message.TransactionIndex}) {
 		// more than one submission. The later submission is considered to be valid.
 		weightedBitVote.BitVote = bitVote
 		weightedBitVote.Weight = weight

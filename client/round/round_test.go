@@ -2,17 +2,15 @@ package round_test
 
 import (
 	"math/big"
+	"testing"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/voters"
+	"github.com/stretchr/testify/require"
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/round"
 	"github.com/flare-foundation/fdc-client/client/utils"
-
-	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestAddAttestation(t *testing.T) {
@@ -134,10 +132,10 @@ func TestAddAttestation(t *testing.T) {
 
 		for j, request := range test.requests {
 			att, err := attestation.AttestationFromDatabaseLog(request)
-			require.NoErrorf(t, err, "error parsing request %d in test %d ", j, i)
+			require.NoErrorf(t, err, "error parsing request %d in test %d", j, i)
 
 			added := round.AddAttestation(att)
-			require.Equalf(t, test.added[j], added, "wrongly added request %d in test %d ", j, i)
+			require.Equalf(t, test.added[j], added, "wrongly added request %d in test %d", j, i)
 		}
 		require.Equalf(t, test.nuOfAttestations, len(round.Attestations), "wrong number of attestations in test %d", i)
 
