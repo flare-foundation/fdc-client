@@ -197,19 +197,19 @@ func (m *Manager) OnBitVote(message payload.Message) (error, error) {
 // The request is parsed into an Attestation that is assigned to an attestation round according to the timestamp.
 // The request is added to verifier queue.
 func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
-	attestation, err := attestation.AttestationFromDatabaseLog(request)
+	att, err := attestation.AttestationFromDatabaseLog(request)
 	if err != nil {
 		return fmt.Errorf("OnRequest: %w", err)
 	}
 
-	round, err := m.GetOrCreateRound(attestation.RoundID)
+	r, err := m.GetOrCreateRound(att.RoundID)
 	if err != nil {
 		return fmt.Errorf("OnRequest: %w", err)
 	}
 
-	added := round.AddAttestation(attestation)
+	added := r.AddAttestation(att)
 	if added {
-		if err := m.AddToQueue(ctx, attestation); err != nil {
+		if err := m.AddToQueue(att); err != nil {
 			return err
 		}
 	}
@@ -229,7 +229,7 @@ func (m *Manager) OnSigningPolicy(data shared.VotersData) error {
 
 	err = m.signingPolicyStorage.Add(parsedPolicy)
 	if err != nil {
-		return err
+		return fmt.Errorf("storing policy: %w", err)
 	}
 
 	m.status.AddPolicy(shared.SigningPolicySummary{
@@ -288,7 +288,7 @@ func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 }
 
 // AddToQueue adds the attestation to the correct verifier queue.
-func (m *Manager) AddToQueue(ctx context.Context, att *attestation.Attestation) error {
+func (m *Manager) AddToQueue(att *attestation.Attestation) error {
 	err := att.PrepareRequest(m.attestationTypeConfig)
 	if err != nil {
 		return fmt.Errorf("preparing request: %w", err)

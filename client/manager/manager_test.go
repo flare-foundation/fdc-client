@@ -2,25 +2,23 @@ package manager
 
 import (
 	"context"
-
-	"github.com/flare-foundation/go-flare-common/pkg/database"
-	"github.com/flare-foundation/go-flare-common/pkg/payload"
-	"github.com/flare-foundation/go-flare-common/pkg/policy"
-
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/flare-foundation/go-flare-common/pkg/database"
+	"github.com/flare-foundation/go-flare-common/pkg/payload"
+	"github.com/flare-foundation/go-flare-common/pkg/policy"
+	"github.com/stretchr/testify/require"
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/require"
 )
 
-const USER_FILE = "../../tests/configs/testConfig.toml" // relative to test
+const userFile = "../../tests/configs/testConfig.toml" // relative to test
 
 var policyLog = database.Log{
 	Address:         "32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC",
@@ -100,7 +98,7 @@ var bitVoteMessage = payload.Message{
 }
 
 func TestManagerMethods(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
+	cfg, err := config.ReadUserRaw(userFile)
 	require.NoError(t, err)
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
@@ -145,7 +143,7 @@ func TestManagerMethods(t *testing.T) {
 }
 
 func TestManager(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
+	cfg, err := config.ReadUserRaw(userFile)
 	require.NoError(t, err)
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
@@ -194,6 +192,7 @@ func TestManager(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	r, ok := mngr.Rounds.Get(664111)
+	require.True(t, ok)
 	require.Equal(t, 3, len(r.Attestations))
 	// send attestation request
 	for i := range 3 {
@@ -212,7 +211,6 @@ func TestManager(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	require.True(t, ok)
 	require.Equal(t, 5, int(r.ConsensusBitVote.BitVector.Int64()))
 
 	cancel()

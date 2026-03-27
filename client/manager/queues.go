@@ -63,7 +63,7 @@ func run(ctx context.Context, q *attestationQueue) {
 		q.Dequeue(ctx, handler, discard)
 
 		if err := ctx.Err(); err != nil {
-			logger.Infof("queue %s exiting: %v ", q.Name(), err)
+			logger.Infof("queue %s exiting: %v", q.Name(), err)
 			return
 		}
 	}
