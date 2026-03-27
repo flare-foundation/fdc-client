@@ -81,7 +81,7 @@ func (s *Server) Shutdown() {
 	defer cancel()
 
 	if err := s.srv.Shutdown(ctx); err != nil {
-		logger.Errorf("server shutdown failed: %v", err)
+		logger.Errorf("Server shutdown failed: %v", err)
 	} else {
 		logger.Info("Server gracefully stopped")
 	}

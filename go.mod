@@ -8,7 +8,6 @@ require (
 	github.com/ethereum/go-ethereum v1.16.7
 	github.com/flare-foundation/go-flare-common v1.2.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.12

@@ -41,7 +41,7 @@ func SigningPolicyInitializedListener(
 	latestQuery := time.Now()
 	logger.Debugf("Logs length: %d", len(logs))
 	if len(logs) == 0 {
-		logger.Panic("No initial signing policies found:")
+		logger.Panic("No initial signing policies found")
 	}
 
 	// signingPolicyStorage expects policies in increasing order

@@ -3,6 +3,7 @@ package attestation
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -14,7 +15,6 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/events"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/priority"
-	"github.com/pkg/errors"
 
 	bitvotes "github.com/flare-foundation/fdc-client/client/attestation/bitVotes"
 	"github.com/flare-foundation/fdc-client/client/config"
@@ -188,7 +188,7 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError
-		return errors.Wrap(err, "unable to resolve attestation request")
+		return fmt.Errorf("unable to resolve attestation request: %w", err)
 	}
 	if !confirmed {
 		a.Status = Unconfirmed
@@ -199,7 +199,7 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	a.Response = responseBytes
 	err = a.validateResponse()
 	if err != nil {
-		return errors.Wrap(err, "unable to validate attestation response")
+		return fmt.Errorf("unable to validate attestation response: %w", err)
 	}
 
 	return nil

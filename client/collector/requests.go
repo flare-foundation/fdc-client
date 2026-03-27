@@ -47,7 +47,7 @@ func AttestationRequestListener(
 		ctx, db, params,
 	)
 	if err != nil {
-		logger.Panic("fetch initial logs")
+		logger.Panicf("fetch initial logs: %v", err)
 	}
 
 	// add requests to the channel

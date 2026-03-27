@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const timeout = 5 * time.Second    // maximal duration for the verifier to resolve the query
@@ -42,19 +40,19 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	encodedBody, err := json.Marshal(payload)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to encode request body")
+		return nil, false, fmt.Errorf("failed to encode request body: %w", err)
 	}
 
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, att.Credentials.URL, bytes.NewBuffer(encodedBody))
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to create http request")
+		return nil, false, fmt.Errorf("failed to create http request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-API-KEY", att.Credentials.apiKey)
 
 	resp, err := client.Do(request)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to send http request")
+		return nil, false, fmt.Errorf("failed to send http request: %w", err)
 	}
 	defer resp.Body.Close() //nolint:errcheck // best-effort close of response body
 
@@ -71,7 +69,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	err = decoder.Decode(&responseBody)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to decode response body")
+		return nil, false, fmt.Errorf("failed to decode response body: %w", err)
 	}
 	if responseBody.Status != ValidResponseStatus {
 		return nil, false, nil
@@ -79,7 +77,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	responseBytes, err := hex.DecodeString(strings.TrimPrefix(responseBody.ABIEncodedResponse, "0x"))
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to decode ABI encoded response")
+		return nil, false, fmt.Errorf("failed to decode ABI encoded response: %w", err)
 	}
 
 	return responseBytes, true, nil

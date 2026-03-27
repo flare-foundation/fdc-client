@@ -63,7 +63,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 		logger.Infof("Initial %d signing policies received", len(signingPolicies))
 
 	case <-ctx.Done():
-		logger.Infof("Manager exiting:", ctx.Err())
+		logger.Infof("Manager exiting: %v", ctx.Err())
 		return
 	}
 

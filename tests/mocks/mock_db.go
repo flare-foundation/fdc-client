@@ -10,9 +10,11 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 
+	"errors"
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -137,7 +139,7 @@ func newTestLog() (*database.Log, error) {
 
 	event, ok := relayABI.Events[spiLogName]
 	if !ok {
-		return nil, errors.Errorf("event %s not found in ABI", spiLogName)
+		return nil, fmt.Errorf("event %s not found in ABI", spiLogName)
 	}
 
 	var indexedArgs abi.Arguments
@@ -148,12 +150,12 @@ func newTestLog() (*database.Log, error) {
 	}
 
 	if len(indexedArgs) != 1 {
-		return nil, errors.Errorf("unexpected number of indexed args: %d %+v", len(indexedArgs), indexedArgs)
+		return nil, fmt.Errorf("unexpected number of indexed args: %d %+v", len(indexedArgs), indexedArgs)
 	}
 
 	topic1, err := indexedArgs.Pack(big.NewInt(rewardEpochID))
 	if err != nil {
-		return nil, errors.Wrap(err, "packing topic1")
+		return nil, fmt.Errorf("packing topic1: %w", err)
 	}
 
 	voters := []common.Address{common.HexToAddress(voterAddrHex)}
@@ -170,7 +172,7 @@ func newTestLog() (*database.Log, error) {
 		uint64(timestamp),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "packing eventData")
+		return nil, fmt.Errorf("packing eventData: %w", err)
 	}
 
 	return &database.Log{

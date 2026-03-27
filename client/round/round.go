@@ -17,7 +17,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/pkg/errors"
 )
 
 const BitVoteMaxNoOfOperations = 20_000_000 // maximal number of operations in the BitVote algorithm
@@ -213,7 +212,7 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 				return common.Hash{}, false, true, nil
 			}
 			if r.Attestations[i].Status != attestation.Success {
-				return common.Hash{}, true, false, errors.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
+				return common.Hash{}, true, false, fmt.Errorf("attestation %s, at index %d in consensus but not confirmed", r.Attestations[i].Request.TypeAndSourceString(), i)
 			}
 			return r.Attestations[i].Hash, true, true, nil
 		}()

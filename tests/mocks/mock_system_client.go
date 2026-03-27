@@ -14,9 +14,10 @@ import (
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/timing"
 
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/pkg/errors"
 )
 
 func MockSystemClient(systemConfig *config.System, userConfig *config.UserRaw, client *ethclient.Client, submitPrivateKey, submitSignaturePrivateKey string) {
@@ -110,7 +111,7 @@ func MakeGetRequest(
 
 	defer rsp.Body.Close() //nolint:errcheck
 	if rsp.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("unexpected status code: %s", rsp.Status)
+		return nil, fmt.Errorf("unexpected status code: %s", rsp.Status)
 	}
 
 	body, err := io.ReadAll(rsp.Body)
