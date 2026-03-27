@@ -2,17 +2,15 @@ package collector
 
 import (
 	"context"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
-
-	"time"
+	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/timing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"gorm.io/gorm"
 )
 
 // BitVoteListener initiates a channel that servers payloads data submitted do submitContractAddress to method with funcSig for protocol.
@@ -77,7 +75,7 @@ func BitVoteListener(
 			select {
 			case roundChan <- payload.Round{Messages: bitVotes, ID: roundID}:
 			case <-ctx.Done():
-				logger.Info("BitVoteListener exiting")
+				logger.Infof("BitVoteListener exiting: %v", ctx.Err())
 				return
 			}
 		} else {
@@ -128,10 +126,13 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 			}
 		}
 
+		ticker.Stop()
+
 		select {
 		case <-bitVoteTicker.C:
 		case <-ctx.Done():
 			logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
+			return
 		}
 	}
 }

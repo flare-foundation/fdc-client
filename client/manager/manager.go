@@ -199,12 +199,12 @@ func (m *Manager) OnBitVote(message payload.Message) (error, error) {
 func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
 	attestation, err := attestation.AttestationFromDatabaseLog(request)
 	if err != nil {
-		return fmt.Errorf("OnRequest: %s", err)
+		return fmt.Errorf("OnRequest: %w", err)
 	}
 
 	round, err := m.GetOrCreateRound(attestation.RoundID)
 	if err != nil {
-		return fmt.Errorf("OnRequest: %s", err)
+		return fmt.Errorf("OnRequest: %w", err)
 	}
 
 	added := round.AddAttestation(attestation)
@@ -291,7 +291,7 @@ func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 func (m *Manager) AddToQueue(ctx context.Context, att *attestation.Attestation) error {
 	err := att.PrepareRequest(m.attestationTypeConfig)
 	if err != nil {
-		return fmt.Errorf("preparing request: %s", err)
+		return fmt.Errorf("preparing request: %w", err)
 	}
 
 	queue, ok := m.queues[att.QueueName]

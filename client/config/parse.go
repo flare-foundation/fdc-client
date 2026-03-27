@@ -14,12 +14,12 @@ func ParseAttestationTypes(attTypesConfigUnparsed AttestationTypesUnparsed) (Att
 	for attName := range attTypesConfigUnparsed {
 		attType, err := StringToByte32(attName)
 		if err != nil {
-			return nil, fmt.Errorf("reading type %s", err)
+			return nil, fmt.Errorf("reading type: %w", err)
 		}
 
 		attTypeConfig, err := ParseAttestationType(attTypesConfigUnparsed[attName])
 		if err != nil {
-			return nil, fmt.Errorf("parsing type %s: %s", attName, err)
+			return nil, fmt.Errorf("parsing type %s: %w", attName, err)
 		}
 
 		attTypesConfig[attType] = attTypeConfig
@@ -65,12 +65,12 @@ func parseSource(sourceConfigBig sourceBig) (Source, error) {
 func ParseAttestationType(attTypeCfgUnparsed AttestationTypeUnparsed) (AttestationType, error) {
 	responseArguments, responseAbiString, err := ReadABI(attTypeCfgUnparsed.ABIPath)
 	if err != nil {
-		return AttestationType{}, fmt.Errorf("getting abi %s", err)
+		return AttestationType{}, fmt.Errorf("getting abi: %w", err)
 	}
 
 	sourcesCfg, err := parseSources(attTypeCfgUnparsed.Sources)
 	if err != nil {
-		return AttestationType{}, fmt.Errorf("parsing: %s", err)
+		return AttestationType{}, fmt.Errorf("parsing: %w", err)
 	}
 
 	return AttestationType{
@@ -87,12 +87,12 @@ func parseSources(sourcesConfigUnparsed map[string]sourceBig) (map[[32]byte]Sour
 	for sourceName := range sourcesConfigUnparsed {
 		source, err := StringToByte32(sourceName)
 		if err != nil {
-			return nil, fmt.Errorf("reading source %s", err)
+			return nil, fmt.Errorf("reading source: %w", err)
 		}
 
 		sourceConfig, err := parseSource(sourcesConfigUnparsed[sourceName])
 		if err != nil {
-			return nil, fmt.Errorf("parsing source config %s", err)
+			return nil, fmt.Errorf("parsing source config: %w", err)
 		}
 
 		sourcesConfig[source] = sourceConfig

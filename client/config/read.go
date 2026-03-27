@@ -60,12 +60,12 @@ func readToml[C any](filePath string) (C, error) {
 
 	file, err := os.ReadFile(filePath)
 	if err != nil {
-		return config, fmt.Errorf("failed reading file %s with: %s", filePath, err)
+		return config, fmt.Errorf("failed reading file %s: %w", filePath, err)
 	}
 
 	err = toml.Unmarshal(file, &config)
 	if err != nil {
-		return config, fmt.Errorf("failed unmarshaling file %s with: %s", filePath, err)
+		return config, fmt.Errorf("failed unmarshaling file %s: %w", filePath, err)
 	}
 
 	return config, nil
@@ -75,12 +75,12 @@ func readToml[C any](filePath string) (C, error) {
 func ReadABI(path string) (abi.Arguments, string, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
-		return abi.Arguments{}, "", fmt.Errorf("failed reading file %s with: %s", path, err)
+		return abi.Arguments{}, "", fmt.Errorf("failed reading file %s: %w", path, err)
 	}
 
 	args, err := ArgumentsFromABI(file)
 	if err != nil {
-		return abi.Arguments{}, "", fmt.Errorf("retrieving arguments from %s with %s", path, err)
+		return abi.Arguments{}, "", fmt.Errorf("retrieving arguments from %s: %w", path, err)
 	}
 
 	abiString := WhiteSpaceStrip(string(file))

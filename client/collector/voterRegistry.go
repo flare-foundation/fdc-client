@@ -3,19 +3,17 @@ package collector
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
+	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/collector/registry"
 	"github.com/flare-foundation/fdc-client/client/shared"
-
-	"fmt"
-
-	"github.com/ethereum/go-ethereum/common"
-	"gorm.io/gorm"
 )
 
 type VoterRegisteredParams struct {

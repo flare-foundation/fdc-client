@@ -3,24 +3,20 @@ package collector
 import (
 	"context"
 	"fmt"
-
-	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
-	"github.com/flare-foundation/go-flare-common/pkg/contracts/submission"
-
-	"github.com/flare-foundation/go-flare-common/pkg/contracts/fdchub"
-	"github.com/flare-foundation/go-flare-common/pkg/database"
-	"github.com/flare-foundation/go-flare-common/pkg/logger"
-	"github.com/flare-foundation/go-flare-common/pkg/payload"
-
-	"github.com/flare-foundation/fdc-client/client/collector/registry"
-
-	"github.com/flare-foundation/fdc-client/client/config"
-	"github.com/flare-foundation/fdc-client/client/shared"
-
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/flare-foundation/go-flare-common/pkg/contracts/fdchub"
+	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
+	"github.com/flare-foundation/go-flare-common/pkg/contracts/submission"
+	"github.com/flare-foundation/go-flare-common/pkg/database"
+	"github.com/flare-foundation/go-flare-common/pkg/logger"
+	"github.com/flare-foundation/go-flare-common/pkg/payload"
 	"gorm.io/gorm"
+
+	"github.com/flare-foundation/fdc-client/client/collector/registry"
+	"github.com/flare-foundation/fdc-client/client/config"
+	"github.com/flare-foundation/fdc-client/client/shared"
 )
 
 const (

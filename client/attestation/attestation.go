@@ -123,12 +123,12 @@ func EarlierLog(a, b IndexLog) bool {
 func AttestationFromDatabaseLog(request database.Log) (*Attestation, error) {
 	rLog, err := ParseAttestationRequestLog(request)
 	if err != nil {
-		return nil, fmt.Errorf("parsing log: %s", err)
+		return nil, fmt.Errorf("parsing log: %w", err)
 	}
 
 	rID, err := timing.RoundIDForTS(request.Timestamp)
 	if err != nil {
-		return nil, fmt.Errorf("parsing log, roundID: %s", err)
+		return nil, fmt.Errorf("parsing log, roundID: %w", err)
 	}
 
 	indexes := []IndexLog{{request.BlockNumber, request.LogIndex}}
@@ -251,13 +251,13 @@ func (a *Attestation) validateResponse() error {
 	micReq, err := a.Request.MIC()
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("reading mic in request: %s, %s ", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("reading mic in request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	micRes, err := a.Response.ComputeMIC(a.ResponseABI)
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("cannot compute mic for request: %s, %s", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("cannot compute mic for request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	if micReq != micRes {
@@ -269,7 +269,7 @@ func (a *Attestation) validateResponse() error {
 	lut, err := a.Response.LUT()
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("cannot read lut from request: %s, %s", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("cannot read lut from request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	roundStart := timing.ChooseStartTS(a.RoundID)

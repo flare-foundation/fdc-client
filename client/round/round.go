@@ -126,7 +126,7 @@ func (r *Round) BitVote() (bitvotes.BitVote, error) {
 func (r *Round) BitVoteBytes() ([]byte, error) {
 	bitVote, err := r.BitVote()
 	if err != nil {
-		return nil, fmt.Errorf("cannot get bitVote for round %d: %s", r.ID, err)
+		return nil, fmt.Errorf("cannot get bitVote for round %d: %w", r.ID, err)
 	}
 
 	return bitVote.EncodeBitVote(), nil
