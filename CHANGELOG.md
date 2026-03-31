@@ -1,6 +1,12 @@
 # Changelog
 
-## [v1.2.8](https://github.com/flare-foundation/fdc-client/tree/v1.2.7) - 2026-3-?
+## [v1.2.9](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-3-?
+
+### Changed
+
+- Improved logging
+
+## [v1.2.8](https://github.com/flare-foundation/fdc-client/tree/v1.2.8) - 2026-3-18
 
 ### Changed
 
