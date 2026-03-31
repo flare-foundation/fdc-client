@@ -17,8 +17,6 @@ import (
 	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/client/timing"
 	"github.com/flare-foundation/fdc-client/client/utils"
-
-	"github.com/pkg/errors"
 )
 
 type Manager struct {
@@ -60,7 +58,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 
 	select {
 	case signingPolicies = <-m.signingPolicies:
-		logger.Info("Initial signing policies received")
+		logger.Infof("Initial %d signing policies received", len(signingPolicies))
 
 	case <-ctx.Done():
 		logger.Info("Manager exiting:", ctx.Err())
@@ -68,8 +66,9 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	}
 
 	for i := range signingPolicies {
+		logger.Infof("adding initial policy %v", signingPolicies[i].Policy.RewardEpochId)
 		if err := m.OnSigningPolicy(signingPolicies[i]); err != nil {
-			logger.Panic("signing policy error:", err)
+			logger.Panic("signing policy %d error:", signingPolicies[i].Policy.RewardEpochId, err)
 		}
 	}
 
@@ -81,13 +80,13 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			for i := range signingPolicies {
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
-					logger.Error("signing policy error:", err)
+					logger.Error("signing policy %d error:", signingPolicies[i].Policy.RewardEpochId, err)
 					shutdownTime := time.Unix(int64(timing.RoundStartTS(signingPolicies[i].Policy.StartVotingRoundId+1)), 0)
 					logger.Infof("scheduling shutdown at %v", shutdownTime)
 					logger.Infof("shutdown after reward epoch %d after the end of voting round %d", signingPolicies[i].Policy.RewardEpochId, signingPolicies[i].Policy.StartVotingRoundId-1)
 					go func(cancel context.CancelFunc, deadline time.Time, err error) {
 						time.Sleep(time.Until(deadline))
-						logger.Errorf("shutting down due to an error in signing policy: %v", err)
+						logger.Errorf("shutting down due to an error in signing policy%d: %v", signingPolicies[i].Policy.RewardEpochId, err)
 						cancel()
 					}(cancel, shutdownTime, err)
 				}
@@ -217,7 +216,7 @@ func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
 func (m *Manager) OnSigningPolicy(data shared.VotersData) error {
 	err := VotersDataCheck(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("validating data %w", err)
 	}
 
 	parsedPolicy := policy.NewSigningPolicy(data.Policy, data.SubmitToSigningAddress)
@@ -235,7 +234,7 @@ func VotersDataCheck(data shared.VotersData) error {
 	for _, voter := range data.Policy.Voters {
 		_, ok := sigToSubmit[voter]
 		if !ok {
-			return errors.New("policy error: submit to signing addresses map incomplete")
+			return fmt.Errorf("voter %v has no submit address", voter)
 		}
 	}
 
