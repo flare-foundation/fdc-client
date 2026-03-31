@@ -35,11 +35,11 @@ func SigningPolicyInitializedListener(
 		ctx, db, params,
 	)
 	if err != nil {
-		logger.Panic("error fetching initial logs:", err)
+		logger.Panicf("fetching initial logs: %v", err)
 	}
 
 	latestQuery := time.Now()
-	logger.Debug("Logs length:", len(logs))
+	logger.Debugf("Logs length: %d", len(logs))
 	if len(logs) == 0 {
 		logger.Panic("No initial signing policies found:")
 	}
@@ -50,17 +50,17 @@ func SigningPolicyInitializedListener(
 	for i := range logs {
 		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[len(logs)-i-1])
 		if err != nil {
-			logger.Panic("error fetching initial signing policies with submit addresses:", err)
+			logger.Panicf("fetching initial signing policies with submit addresses: %v", err)
 		}
 
 		sorted = append(sorted, votersData)
-		logger.Info("fetched initial policy for round ", votersData.Policy.RewardEpochId)
+		logger.Infof("fetched initial policy for round %v", votersData.Policy.RewardEpochId)
 	}
 
 	select {
 	case votersDataChan <- sorted:
 	case <-ctx.Done():
-		logger.Info("SigningPolicyInitializedListener exiting:", ctx.Err())
+		logger.Infof("SigningPolicyInitializedListener exiting: %v", ctx.Err())
 	}
 
 	spiTargetedListener(ctx, db, relayContractAddress, registryContractAddress, logs[0], latestQuery, votersDataChan)
@@ -80,7 +80,7 @@ func spiTargetedListener(
 ) {
 	lastSigningPolicy, err := policy.ParseSigningPolicyInitializedEvent(lastLog)
 	if err != nil {
-		logger.Panic("error parsing initial logs:", err)
+		logger.Panicf("parsing initial logs: %v", err)
 	}
 
 	lastInitializedRewardEpochID := lastSigningPolicy.RewardEpochId.Uint64()
@@ -100,18 +100,18 @@ func spiTargetedListener(
 		case <-timer.C:
 			logger.Debug("querying for next signing policy")
 		case <-ctx.Done():
-			logger.Info("spiTargetedListener exiting:", ctx.Err())
+			logger.Infof("spiTargetedListener exiting: %v", ctx.Err())
 			return
 		}
 
 		logsWithSubmitAddresses, err := queryNextSPI(ctx, db, relayContractAddress, registryContractAddress, latestQuery, lastInitializedRewardEpochID)
 		if err != nil {
 			if errors.Is(err, ctx.Err()) {
-				logger.Info("spiTargetedListener exiting:", err)
+				logger.Infof("spiTargetedListener exiting: %v", err)
 				return
 			}
 
-			logger.Error("error querying next SPI event:", err)
+			logger.Errorf("querying next SPI event: %v", err)
 			continue
 		}
 		votersDataChan <- logsWithSubmitAddresses

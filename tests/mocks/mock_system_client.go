@@ -29,7 +29,7 @@ func MockSystemClient(systemConfig *config.System, userConfig *config.UserRaw, c
 
 		round, err := timing.RoundIDForTS(uint64(now.Unix()))
 		if err != nil {
-			logger.Fatal("Error: %s", err)
+			logger.Fatalf("%s", err)
 		}
 		// two processes since the intervals are overlapping
 		go SystemClientIteration(userConfig, submitAddress, submitSigAddress, round)
@@ -51,28 +51,28 @@ func SystemClientIteration(userConfig *config.UserRaw, submitAddress, submitSigA
 
 	rspData, err := MakeGetRequest("submit1", &userConfig.RestServer, round, submitAddress.Hex())
 	if err != nil || rspData.Status != payload.Ok {
-		logger.Error("error submit1 response ", rspData, err)
+		logger.Errorf("submit1 response %v: %v", rspData, err)
 		return
 	}
-	logger.Info("response submit1 ", rspData.Status)
+	logger.Infof("response submit1 %v", rspData.Status)
 
 	timer = time.NewTimer(time.Until(time.Unix(int64(submit2Time+6), 0)))
 	<-timer.C
 	rspData, err = MakeGetRequest("submit2", &userConfig.RestServer, round, submitAddress.Hex())
 	if err != nil || rspData.Status != payload.Ok {
-		logger.Error("error submit2 response ", rspData, err)
+		logger.Errorf("submit2 response %v: %v", rspData, err)
 		return
 	}
-	logger.Info("response submit2 ", rspData.Status)
+	logger.Infof("response submit2 %v", rspData.Status)
 
 	timer = time.NewTimer(time.Until(time.Unix(int64(submitSignature+5), 0)))
 	<-timer.C
 	rspData, err = MakeGetRequest("submitSignatures", &userConfig.RestServer, round, submitSigAddress.Hex())
 	if err != nil || rspData.Status != payload.Ok {
-		logger.Error("error submit2 response ", rspData, err)
+		logger.Errorf("submitSignatures response %v: %v", rspData, err)
 		return
 	}
-	logger.Info("response submitSignatures ", rspData.Status)
+	logger.Infof("response submitSignatures %v", rspData.Status)
 }
 
 func MakeGetRequest(
@@ -87,7 +87,7 @@ func MakeGetRequest(
 	if err != nil {
 		return nil, err
 	}
-	logger.Info("making request to ", p)
+	logger.Infof("making request to %s", p)
 
 	u := url.URL{
 		Scheme: "http",

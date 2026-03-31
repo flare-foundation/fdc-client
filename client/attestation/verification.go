@@ -11,8 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/flare-foundation/fdc-client/client/utils"
-
-	"github.com/flare-foundation/go-flare-common/pkg/logger"
 )
 
 var stringArgument abi.Argument
@@ -20,7 +18,7 @@ var stringArgument abi.Argument
 func init() {
 	stringType, err := abi.NewType("string", "string", []abi.ArgumentMarshaling{})
 	if err != nil {
-		logger.Panic("cannot build string Solidity type:", err)
+		panic(fmt.Sprintf("cannot build string Solidity type: %v", err))
 	}
 
 	stringArgument = abi.Argument{Name: "string", Indexed: false, Type: stringType}

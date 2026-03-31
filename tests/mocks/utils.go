@@ -47,12 +47,12 @@ func PrivKeyToAddress(privateKey string) (common.Address, *ecdsa.PrivateKey) {
 	}
 	privateKeyECDSA, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 	publicKey := privateKeyECDSA.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		logger.Fatal("error casting public key to ECDSA")
+		logger.Fatal("casting public key to ECDSA")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)

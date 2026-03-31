@@ -44,7 +44,7 @@ func main() {
 
 	client, err := ethclient.Dial(chainRpc)
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 
 	go mocks.MockParticipants(systemConfig, participantsSubmitSecKeys, client, request)

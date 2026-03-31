@@ -21,7 +21,7 @@ func (c *FDCProtocolProviderController) submit2Service(roundID uint32, _ string)
 	// error only if there are too many attestations (more than 2^16)
 	bv, err := vRound.BitVoteBytes()
 	if err != nil {
-		logger.Errorf("submit2: error for bitVote %s", err)
+		logger.Errorf("submit2: bitVote %s", err)
 
 		return "", false, err
 	}

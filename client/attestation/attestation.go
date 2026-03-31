@@ -62,7 +62,7 @@ func init() {
 
 	fdcFilterer, err = fdchub.NewFdcHubFilterer(common.Address{}, nil)
 	if err != nil {
-		logger.Panic("cannot get fdc contract:", err)
+		panic(fmt.Sprintf("cannot get fdc contract: %v", err))
 	}
 }
 

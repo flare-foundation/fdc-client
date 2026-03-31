@@ -2,6 +2,7 @@ package collector
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/submission"
@@ -43,42 +44,42 @@ var Submit2FuncSel [4]byte
 func init() {
 	relayABI, err := relay.RelayMetaData.GetAbi()
 	if err != nil {
-		logger.Panic("cannot get relayABI:", err)
+		panic(fmt.Sprintf("cannot get relayABI: %v", err))
 	}
 
 	signingPolicyEvent, ok := relayABI.Events["SigningPolicyInitialized"]
 	if !ok {
-		logger.Panic("cannot get SigningPolicyInitialized event abi")
+		panic("cannot get SigningPolicyInitialized event abi")
 	}
 	signingPolicyInitializedEventSel = signingPolicyEvent.ID
 
 	fdcABI, err := fdchub.FdcHubMetaData.GetAbi()
 	if err != nil {
-		logger.Panic("cannot get fdcABI:", err)
+		panic(fmt.Sprintf("cannot get fdcABI: %v", err))
 	}
 
 	requestEvent, ok := fdcABI.Events["AttestationRequest"]
 	if !ok {
-		logger.Panic("cannot get AttestationRequest event abi")
+		panic("cannot get AttestationRequest event abi")
 	}
 
 	AttestationRequestEventSel = requestEvent.ID
 
 	registryABI, err := registry.RegistryMetaData.GetAbi()
 	if err != nil {
-		logger.Panic("cannot get registryABI:", err)
+		panic(fmt.Sprintf("cannot get registryABI: %v", err))
 	}
 
 	voterRegisteredEvent, ok := registryABI.Events["VoterRegistered"]
 	if !ok {
-		logger.Panic("cannot get VoterRegistered event abi")
+		panic("cannot get VoterRegistered event abi")
 	}
 
 	voterRegisteredEventSel = voterRegisteredEvent.ID
 
 	submissionABI, err := submission.SubmissionMetaData.GetAbi()
 	if err != nil {
-		logger.Panic("cannot get submissionABI:", err)
+		panic(fmt.Sprintf("cannot get submissionABI: %v", err))
 	}
 	copy(Submit2FuncSel[:], submissionABI.Methods["submit2"].ID[:4])
 }
@@ -100,7 +101,7 @@ type Collector struct {
 func New(user *config.UserRaw, system *config.System, sharedDataPipes *shared.DataPipes) *Collector {
 	db, err := database.Connect(&user.DB)
 	if err != nil {
-		logger.Panic("Could not connect to database:", err)
+		logger.Panicf("Could not connect to database: %v", err)
 	}
 
 	runner := Collector{
@@ -138,7 +139,7 @@ func (c *Collector) WaitForDBToSync(ctx context.Context) {
 		}
 		state, err := database.FetchState(ctx, c.DB, nil)
 		if err != nil {
-			logger.Panic("database error:", err)
+			logger.Panicf("database: %v", err)
 		}
 
 		dbTime := time.Unix(int64(state.BlockTimestamp), 0)
@@ -160,14 +161,14 @@ func (c *Collector) WaitForDBToSync(ctx context.Context) {
 	logger.Warnf("Checking database for the final time")
 	state, err := database.FetchState(ctx, c.DB, nil)
 	if err != nil {
-		logger.Panic("database error:", err)
+		logger.Panicf("database: %v", err)
 	}
 
 	dbTime := time.Unix(int64(state.BlockTimestamp), 0)
 
 	outOfSync := time.Since(dbTime)
 	if outOfSync > outOfSyncTolerance {
-		logger.Panic("Database out of sync after %v retries. Delayed for %v", syncRetry, outOfSync)
+		logger.Panicf("Database out of sync after %v retries. Delayed for %v", syncRetry, outOfSync)
 	} else {
 		logger.Debug("Database in sync")
 	}

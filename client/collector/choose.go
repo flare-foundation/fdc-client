@@ -34,7 +34,7 @@ func BitVoteListener(
 			logger.Debugf("starting BitVoteListener for round %v", roundID)
 
 		case <-ctx.Done():
-			logger.Info("BitVoteListener exiting:", ctx.Err())
+			logger.Infof("BitVoteListener exiting: %v", ctx.Err())
 			return
 		}
 
@@ -51,7 +51,7 @@ func BitVoteListener(
 			params,
 		)
 		if err != nil {
-			logger.Error("fetch txs error:", err)
+			logger.Errorf("fetch txs: %v", err)
 			continue
 		}
 
@@ -61,7 +61,7 @@ func BitVoteListener(
 			tx := &txs[i]
 			payloads, err := payload.ExtractPayloads(tx)
 			if err != nil {
-				logger.Error("extract payload error:", err)
+				logger.Errorf("extract payload: %v", err)
 				continue
 			}
 
@@ -90,7 +90,7 @@ func BitVoteListener(
 func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB) {
 	state, err := database.FetchState(ctx, db, nil)
 	if err != nil {
-		logger.Panic("database error:", err)
+		logger.Panicf("database: %v", err)
 	}
 
 	nextChoosePhaseRoundIDEnd := new(uint32)
@@ -108,7 +108,7 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 			state, err := database.FetchState(ctx, db, nil)
 
 			if err != nil {
-				logger.Error("database error:", err)
+				logger.Errorf("database: %v", err)
 			} else {
 				done := tryTriggerBitVote(
 					ctx, nextChoosePhaseRoundIDEnd, nextChoosePhaseEndTimestamp, state.BlockTimestamp, trigger,
@@ -123,7 +123,7 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 			case <-ticker.C:
 
 			case <-ctx.Done():
-				logger.Info("prepareChooseTriggers exiting:", ctx.Err())
+				logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
 				return
 			}
 		}
@@ -131,7 +131,7 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 		select {
 		case <-bitVoteTicker.C:
 		case <-ctx.Done():
-			logger.Info("prepareChooseTriggers exiting:", ctx.Err())
+			logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
 		}
 	}
 }
@@ -174,7 +174,7 @@ func tryTriggerBitVote(
 			logger.Infof("bitVote for round %d started with %s time", *nextChoosePhaseRoundIDEnd, logMsg)
 
 		case <-ctx.Done():
-			logger.Info("tryTriggerBitVote exiting:", ctx.Err())
+			logger.Infof("tryTriggerBitVote exiting: %v", ctx.Err())
 			return false
 		}
 

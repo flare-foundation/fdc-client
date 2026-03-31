@@ -26,12 +26,12 @@ func AttestationRequestListener(
 	// initial query
 	_, startTimestamp, err := timing.LastCollectPhaseStart(uint64(time.Now().Unix()))
 	if err != nil {
-		logger.Panic("time:", err)
+		logger.Panicf("time: %v", err)
 	}
 
 	state, err := database.FetchState(ctx, db, nil)
 	if err != nil {
-		logger.Panic("fetch initial state error:", err)
+		logger.Panicf("fetch initial state: %v", err)
 	}
 
 	lastQueriedBlock := state.Index
@@ -47,7 +47,7 @@ func AttestationRequestListener(
 		ctx, db, params,
 	)
 	if err != nil {
-		logger.Panic("fetch initial logs error")
+		logger.Panic("fetch initial logs")
 	}
 
 	// add requests to the channel
@@ -55,7 +55,7 @@ func AttestationRequestListener(
 		select {
 		case logChan <- logs:
 		case <-ctx.Done():
-			logger.Info("AttestationRequestListener exiting:", ctx.Err())
+			logger.Infof("AttestationRequestListener exiting: %v", ctx.Err())
 			return
 		}
 	}
@@ -65,13 +65,13 @@ func AttestationRequestListener(
 		select {
 		case <-trigger.C:
 		case <-ctx.Done():
-			logger.Info("AttestationRequestListener exiting:", ctx.Err())
+			logger.Infof("AttestationRequestListener exiting: %v", ctx.Err())
 			return
 		}
 
 		state, err = database.FetchState(ctx, db, nil)
 		if err != nil {
-			logger.Error("fetch state error:", err)
+			logger.Errorf("fetch state: %v", err)
 			continue
 		}
 
@@ -86,7 +86,7 @@ func AttestationRequestListener(
 			ctx, db, params,
 		)
 		if err != nil {
-			logger.Error("fetch logs error:", err)
+			logger.Errorf("fetch logs: %v", err)
 			continue
 		}
 
@@ -97,7 +97,7 @@ func AttestationRequestListener(
 			select {
 			case logChan <- logs:
 			case <-ctx.Done():
-				logger.Info("AttestationRequestListener exiting:", ctx.Err())
+				logger.Infof("AttestationRequestListener exiting: %v", ctx.Err())
 				return
 			}
 		}

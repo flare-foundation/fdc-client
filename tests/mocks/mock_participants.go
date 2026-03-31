@@ -30,18 +30,18 @@ var chainID = int64(31337)
 func MockParticipants(systemConfig *config.System, participants []string, client *ethclient.Client, requestData string) {
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 	gasPrice.Mul(gasPrice, big.NewInt(2))
 
 	fdcHub, err := fdchub.NewFdcHub(systemConfig.Addresses.FdcContract, client)
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 
 	addresses, privateKeys, err := Participants(participants)
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 
 	first := true
@@ -50,7 +50,7 @@ func MockParticipants(systemConfig *config.System, participants []string, client
 
 		round, err := timing.RoundIDForTS(uint64(now.Unix()))
 		if err != nil {
-			logger.Fatal("Error: %s", err)
+			logger.Fatalf("%s", err)
 		}
 
 		startTime := timing.RoundStartTS(round + 1)
@@ -58,13 +58,13 @@ func MockParticipants(systemConfig *config.System, participants []string, client
 		timer := time.NewTimer(time.Until(time.Unix(int64(startTime+2), 0)))
 		<-timer.C
 		round++
-		logger.Info("start of round ", round)
+		logger.Infof("start of round %d", round)
 
 		if !first {
 			for j := range participants {
 				err = sendBitvote(round-1, client, systemConfig.Addresses.SubmitContract, addresses[j], privateKeys[j], gasPrice)
 				if err != nil {
-					logger.Error("Error: %s", err)
+					logger.Errorf("%s", err)
 				} else {
 					logger.Infof("successfully sent bitvote for round %d by participant %d", round-1, j)
 				}
@@ -78,11 +78,11 @@ func MockParticipants(systemConfig *config.System, participants []string, client
 			if err != nil {
 				continue
 			}
-			logger.Info("successfully submitted request in round ", round)
+			logger.Infof("successfully submitted request in round %d", round)
 			break
 		}
 		if err != nil {
-			logger.Error("Error: %s", err)
+			logger.Errorf("%s", err)
 			continue
 		}
 	}
@@ -109,7 +109,7 @@ func sendRequest(i int, client *ethclient.Client, fdcHub *fdchub.FdcHub, fromAdd
 
 	opts, err := bind.NewKeyedTransactorWithChainID(privateKeyECDSA, big.NewInt(chainID))
 	if err != nil {
-		logger.Fatal("Error: %s", err)
+		logger.Fatalf("%s", err)
 	}
 	opts.Value = big.NewInt(int64(1000000))
 	opts.GasLimit = uint64(8000000)
@@ -136,7 +136,7 @@ func sendRequest(i int, client *ethclient.Client, fdcHub *fdchub.FdcHub, fromAdd
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("error: Transaction fail: %s", reason)
+		return fmt.Errorf("transaction fail: %s", reason)
 	}
 
 	return nil
@@ -186,7 +186,7 @@ func sendBitvote(round uint32, client *ethclient.Client, toAddress, fromAddress 
 			return err
 		}
 
-		return fmt.Errorf("error: Transaction fail: %s", reason)
+		return fmt.Errorf("transaction fail: %s", reason)
 	}
 
 	return nil

@@ -65,7 +65,7 @@ func EnsembleConsensusBitVote(allBitVotes []*WeightedBitVote, fees []*big.Int, t
 	filterResults, filterSolution, err := ensemble(allBitVotes, fees, totalWeight, maxOperations)
 
 	if err != nil {
-		return BitVote{}, fmt.Errorf("error consensus bitVote: %s", err)
+		return BitVote{}, fmt.Errorf("consensus bitVote: %s", err)
 	}
 
 	return AssembleSolution(filterResults, filterSolution, uint16(len(fees))), nil

@@ -68,7 +68,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	for i := range signingPolicies {
 		logger.Infof("adding initial policy %v", signingPolicies[i].Policy.RewardEpochId)
 		if err := m.OnSigningPolicy(signingPolicies[i]); err != nil {
-			logger.Panicf("signing policy %d error: %v", signingPolicies[i].Policy.RewardEpochId, err)
+			logger.Panicf("signing policy %d: %v", signingPolicies[i].Policy.RewardEpochId, err)
 		}
 	}
 
@@ -80,13 +80,13 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			for i := range signingPolicies {
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
-					logger.Errorf("signing policy %d error: %v", signingPolicies[i].Policy.RewardEpochId, err)
+					logger.Errorf("signing policy %d: %v", signingPolicies[i].Policy.RewardEpochId, err)
 					shutdownTime := time.Unix(int64(timing.RoundStartTS(signingPolicies[i].Policy.StartVotingRoundId+1)), 0)
 					logger.Infof("scheduling shutdown at %v", shutdownTime)
 					logger.Infof("shutdown after reward epoch %d after the end of voting round %d", signingPolicies[i].Policy.RewardEpochId, signingPolicies[i].Policy.StartVotingRoundId-1)
 					go func(cancel context.CancelFunc, deadline time.Time, err error) {
 						time.Sleep(time.Until(deadline))
-						logger.Errorf("shutting down due to an error in signing policy%d: %v", signingPolicies[i].Policy.RewardEpochId, err)
+						logger.Errorf("shutting down due to signing policy %d: %v", signingPolicies[i].Policy.RewardEpochId, err)
 						cancel()
 					}(cancel, shutdownTime, err)
 				}
@@ -105,7 +105,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 					logger.Debugf("bad bitVote: %s", bitVoteErr)
 				}
 				if err != nil {
-					logger.Errorf("bit vote error: %s", err)
+					logger.Errorf("bit vote: %s", err)
 				}
 			}
 
@@ -124,7 +124,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 
 				noOfRetried, err := m.retryUnsuccessfulChosen(r)
 				if err != nil {
-					logger.Warnf("error retrying round %d: %v", r.ID, err)
+					logger.Warnf("retrying round %d: %v", r.ID, err)
 				} else if noOfRetried > 0 {
 					logger.Debugf("retrying %d attestations in round %d", noOfRetried, r.ID)
 				}
@@ -182,7 +182,7 @@ func (m *Manager) OnBitVote(message payload.Message) (error, error) {
 
 	err = round.ProcessBitVote(message)
 	if err != nil {
-		return fmt.Errorf("error processing bitVote from %s for voting round %d: %s", message.From, message.VotingRound, err), nil
+		return fmt.Errorf("processing bitVote from %s for voting round %d: %s", message.From, message.VotingRound, err), nil
 	}
 
 	return nil, nil

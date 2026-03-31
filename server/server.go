@@ -87,7 +87,7 @@ func (s *Server) Run(ctx context.Context) {
 
 	err := s.srv.ListenAndServe()
 	if err != nil && err != http.ErrServerClosed {
-		logger.Panicf("Server error: %v", err)
+		logger.Panicf("server: %v", err)
 	}
 }
 
@@ -96,7 +96,7 @@ func (s *Server) Shutdown() {
 	defer cancel()
 
 	if err := s.srv.Shutdown(ctx); err != nil {
-		logger.Error("Server shutdown failed:", err)
+		logger.Errorf("server shutdown failed: %v", err)
 	} else {
 		logger.Info("Server gracefully stopped")
 	}

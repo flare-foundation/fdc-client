@@ -107,7 +107,7 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 	logger.Debugf("fetching voter registered events for %d from %v", rewardEpochID, registryContractAddress)
 	logs, err := FetchVoterRegisteredEventsForRewardEpoch(ctx, db, VoterRegisteredParams{registryContractAddress, rewardEpochID})
 	if err != nil {
-		return nil, fmt.Errorf("error fetching registered events: %s", err)
+		return nil, fmt.Errorf("fetching registered events: %s", err)
 	}
 
 	var submitToSigning map[common.Address]common.Address
@@ -120,12 +120,12 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 		common.HexToAddress(oldRegistryFlare):
 		submitToSigning, err = BuildSubmitToSigningPolicyAddressOld(logs)
 		if err != nil {
-			return nil, fmt.Errorf("error old building submitToSigning map: %s", err)
+			return nil, fmt.Errorf("old building submitToSigning map: %s", err)
 		}
 	default:
 		submitToSigning, err = BuildSubmitToSigningPolicyAddressNew(logs)
 		if err != nil {
-			return nil, fmt.Errorf("error new building submitToSigning map: %s", err)
+			return nil, fmt.Errorf("new building submitToSigning map: %s", err)
 		}
 	}
 
@@ -154,7 +154,7 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
 	if err != nil {
-		return shared.VotersData{}, fmt.Errorf("error adding submit addresses: %s", err)
+		return shared.VotersData{}, fmt.Errorf("adding submit addresses: %s", err)
 	}
 	logger.Debugf("received %d registered submit addresses for reward epoch %d", len(submitToSigning), rewardEpochID)
 
