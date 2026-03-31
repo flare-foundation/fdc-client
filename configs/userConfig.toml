@@ -167,19 +167,42 @@ api_key = ""
 lut_limit = "26400000"
 queue = "eth"
 
-##SGB
+## SGB
 [types.EVMTransaction.Sources.testSGB]
 url = ""
 api_key = ""
 lut_limit = "18446744073709551615"
 queue = "sgb"
 
-##FLR
+## FLR
 [types.EVMTransaction.Sources.testFLR]
 url = ""
 api_key = ""
 lut_limit = "18446744073709551615"
 queue = "flr"
+
+# XRPPayment
+[types.XRPPayment]
+abi_path = "configs/abis/XRPPayment.json"
+
+## XRP
+[types.XRPPayment.Sources.testXRP]
+url = ""
+api_key = ""
+lut_limit = "1209600"
+queue = "xrp"
+
+
+# XRPPaymentNonexistence
+[types.# XRPPaymentNonexistence]
+abi_path = "configs/abis/XRPPaymentNonexistence.json"
+
+## XRP
+[types.XRPPaymentNonexistence.Sources.testXRP]
+url = ""
+api_key = ""
+lut_limit = "1209600"
+queue = "xrp"
 
 
 # Queues
