@@ -58,6 +58,9 @@ func fetchVoterRegisteredEventsForRewardEpoch(ctx context.Context, db *gorm.DB, 
 	}
 
 	epochID := common.BigToHash(epochIDBig)
+
+	logger.Debugf("voterRegistry query params: address %s, eventSelector %s, epochID %s", hex.EncodeToString(params.Address[:]), hex.EncodeToString(eventSelector[:]), hex.EncodeToString(epochID[:]))
+
 	err := db.WithContext(ctx).Where(
 		"address = ? AND topic0 = ? AND topic2 = ?",
 		hex.EncodeToString(params.Address[:]), // encodes without 0x prefix and without checksum

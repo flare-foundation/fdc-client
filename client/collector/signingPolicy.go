@@ -164,7 +164,7 @@ func queryNextSPI(
 				}
 				if votersData.Policy.RewardEpochId.Uint64() > latestRewardEpoch {
 					votersDataArray = append(votersDataArray, votersData)
-					logger.Info("fetched policy for round ", votersData.Policy.RewardEpochId)
+					logger.Infof("fetched policy for round %d", votersData.Policy.RewardEpochId)
 				}
 			}
 			if len(votersDataArray) > 0 {

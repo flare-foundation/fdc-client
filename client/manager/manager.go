@@ -61,14 +61,14 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 		logger.Infof("Initial %d signing policies received", len(signingPolicies))
 
 	case <-ctx.Done():
-		logger.Info("Manager exiting:", ctx.Err())
+		logger.Infof("Manager exiting:", ctx.Err())
 		return
 	}
 
 	for i := range signingPolicies {
 		logger.Infof("adding initial policy %v", signingPolicies[i].Policy.RewardEpochId)
 		if err := m.OnSigningPolicy(signingPolicies[i]); err != nil {
-			logger.Panic("signing policy %d error:", signingPolicies[i].Policy.RewardEpochId, err)
+			logger.Panicf("signing policy %d error: %v", signingPolicies[i].Policy.RewardEpochId, err)
 		}
 	}
 
@@ -80,7 +80,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			for i := range signingPolicies {
 				err := m.OnSigningPolicy(signingPolicies[i])
 				if err != nil {
-					logger.Error("signing policy %d error:", signingPolicies[i].Policy.RewardEpochId, err)
+					logger.Errorf("signing policy %d error: %v", signingPolicies[i].Policy.RewardEpochId, err)
 					shutdownTime := time.Unix(int64(timing.RoundStartTS(signingPolicies[i].Policy.StartVotingRoundId+1)), 0)
 					logger.Infof("scheduling shutdown at %v", shutdownTime)
 					logger.Infof("shutdown after reward epoch %d after the end of voting round %d", signingPolicies[i].Policy.RewardEpochId, signingPolicies[i].Policy.StartVotingRoundId-1)
@@ -102,7 +102,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 				bitVoteErr, err := m.OnBitVote(bvsForRound.Messages[i])
 
 				if bitVoteErr != nil {
-					logger.Debug("bad bitVote: %s", bitVoteErr)
+					logger.Debugf("bad bitVote: %s", bitVoteErr)
 				}
 				if err != nil {
 					logger.Errorf("bit vote error: %s", err)
@@ -139,7 +139,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			}
 
 		case <-ctx.Done():
-			logger.Info("Manager exiting: %v", ctx.Err())
+			logger.Infof("Manager exiting: %v", ctx.Err())
 			return
 		}
 	}
