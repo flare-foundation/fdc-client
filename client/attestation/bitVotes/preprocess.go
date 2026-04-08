@@ -3,6 +3,7 @@ package bitvotes
 import (
 	"math/big"
 	"slices"
+	"strings"
 
 	"github.com/flare-foundation/fdc-client/client/utils"
 )
@@ -180,7 +181,7 @@ func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *
 	slices.Sort(remainingVotesSorted)
 
 	for _, i := range remainingBitsSorted {
-		identifier := ""
+		var idBuilder strings.Builder
 		support := filterResults.GuaranteedWeight
 
 		for _, j := range remainingVotesSorted {
@@ -188,11 +189,13 @@ func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *
 
 			if bit == 1 {
 				support += bitVotes[j].Weight
-				identifier += "1"
+				idBuilder.WriteString("1")
 			} else {
-				identifier += "0"
+				idBuilder.WriteString("0")
 			}
 		}
+
+		identifier := idBuilder.String()
 
 		aggFee, exists := aggregator[identifier]
 		if !exists {
@@ -230,18 +233,21 @@ func AggregateVotes(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults 
 
 	for _, i := range remainingVotesSorted {
 		feesVote := big.NewInt(0).Set(filterResults.GuaranteedFees)
-		identifier := ""
+
+		var idBuilder strings.Builder
 
 		for _, j := range remainingBitsSorted {
 			bit := bitVotes[i].BitVote.BitVector.Bit(j)
 
 			if bit == 1 {
 				feesVote.Add(feesVote, fees[j])
-				identifier += "1"
+				idBuilder.WriteString("1")
 			} else {
-				identifier += "0"
+				idBuilder.WriteString("0")
 			}
 		}
+
+		identifier := idBuilder.String()
 
 		aggVote, exists := aggregator[identifier]
 
