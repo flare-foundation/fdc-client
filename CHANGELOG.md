@@ -1,10 +1,14 @@
 # Changelog
 
-## [v1.2.9](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-3-?
+## [v1.2.9](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-4-?
 
 ### Changed
 
-- Improved logging
+- Improved logging.
+
+### Added
+
+- ABIs for new attestation types: XRPPayment and XRPPaymentNonexistence.
 
 ## [v1.2.8](https://github.com/flare-foundation/fdc-client/tree/v1.2.8) - 2026-3-18
 
