@@ -16,6 +16,8 @@ const timeout = 5 * time.Second    // maximal duration for the verifier to resol
 const maxRespSize = 10 * (1 << 20) // 10 MB for maximal response size of the verifier
 const ValidResponseStatus = "VALID"
 
+var verifierClient = &http.Client{Timeout: timeout}
+
 type ABIEncodedRequestBody struct {
 	ABIEncodedRequest string `json:"abiEncodedRequest"`
 }
@@ -33,7 +35,6 @@ type VerifierCredentials struct {
 // ResolveAttestationRequest sends the attestation request to the verifier server with verifierCredentials and stores the response.
 // Returns true if the response is "VALID" and false otherwise.
 func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, bool, error) {
-	client := &http.Client{Timeout: timeout}
 	requestBytes := att.Request
 	encoded := hex.EncodeToString(requestBytes)
 	payload := ABIEncodedRequestBody{ABIEncodedRequest: "0x" + encoded}
@@ -50,7 +51,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-API-KEY", att.Credentials.apiKey)
 
-	resp, err := client.Do(request)
+	resp, err := verifierClient.Do(request)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to send http request: %w", err)
 	}

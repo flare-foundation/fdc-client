@@ -97,7 +97,9 @@ func writeJSON(w http.ResponseWriter, v any) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(data)
+	if _, err = w.Write(data); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
 }
 
 func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Handler {

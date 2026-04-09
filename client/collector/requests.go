@@ -22,6 +22,7 @@ func AttestationRequestListener(
 	logChan chan<- []database.Log,
 ) {
 	trigger := time.NewTicker(listenerInterval)
+	defer trigger.Stop()
 
 	// initial query
 	_, startTimestamp, err := timing.LastCollectPhaseStart(uint64(time.Now().Unix()))

@@ -114,7 +114,12 @@ func spiTargetedListener(
 			logger.Errorf("querying next SPI event: %v", err)
 			continue
 		}
-		votersDataChan <- logsWithSubmitAddresses
+		select {
+		case votersDataChan <- logsWithSubmitAddresses:
+		case <-ctx.Done():
+			logger.Infof("spiTargetedListener exiting: %v", ctx.Err())
+			return
+		}
 
 		latestQuery = time.Now()
 		lastInitializedRewardEpochID++
@@ -133,6 +138,7 @@ func queryNextSPI(
 	error,
 ) {
 	ticker := time.NewTicker(time.Duration(timing.Chain.CollectDurationSec-1) * time.Second) // ticker that is guaranteed to tick at least once per SystemVotingRound
+	defer ticker.Stop()
 
 	for {
 		now := time.Now()
@@ -168,7 +174,6 @@ func queryNextSPI(
 				}
 			}
 			if len(votersDataArray) > 0 {
-				ticker.Stop()
 				return votersDataArray, nil
 			}
 		}
