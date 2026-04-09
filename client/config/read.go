@@ -17,13 +17,17 @@ import (
 //
 // System configurations are read for Chain and protocolID set in the user configurations.
 //
-// DB settings are overridden by environment variables if they exist.
+// DB and REST server settings are overridden by environment variables if they exist.
 // The following environment variables are used:
 //   - DB_HOST
 //   - DB_PORT
 //   - DB_USERNAME
 //   - DB_PASSWORD
 //   - DB_NAME
+//   - REST_ADDR
+//   - REST_API_KEY_NAME
+//   - REST_API_KEYS (comma-separated)
+//   - REST_CORS_ORIGIN
 func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 	userConfigRaw, err := ReadUserRaw(userFilePath)
 	if err != nil {
@@ -37,7 +41,12 @@ func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 
 	err = envconfig.Process("", &userConfigRaw.DB)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading env variables: %w", err)
+		return nil, nil, fmt.Errorf("reading db env variables: %w", err)
+	}
+
+	err = envconfig.Process("", &userConfigRaw.RestServer)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reading rest server env variables: %w", err)
 	}
 
 	return &userConfigRaw, &systemConfig, nil

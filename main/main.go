@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 
@@ -70,8 +69,7 @@ func main() {
 	// Block until a termination signal is received.
 	select {
 	case <-cancelChan:
-		logger.Info("Received an interrupt signal, shutting down after 2 minutes")
-		time.Sleep(2 * time.Minute)
+		logger.Info("Received an interrupt signal, shutting down...")
 	case <-ctx.Done():
 		logger.Info("Context cancelled, shutting down...")
 	}

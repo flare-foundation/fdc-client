@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
@@ -59,6 +60,7 @@ func New(
 		ReadHeaderTimeout: 15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
@@ -88,23 +90,29 @@ func (s *Server) Shutdown() {
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		logger.Errorf("failed to write JSON response: %v", err)
+	data, err := json.Marshal(v)
+	if err != nil {
+		logger.Errorf("failed to marshal JSON response: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(data)
 }
 
 func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Handler {
+	hashedKeys := make([][32]byte, len(keys))
+	for i, k := range keys {
+		hashedKeys[i] = sha256.Sum256([]byte(k))
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		key := []byte(r.Header.Get(keyName))
-		valid := false
-		for _, k := range keys {
-			if subtle.ConstantTimeCompare(key, []byte(k)) == 1 {
-				valid = true
-				break
-			}
+		keyHash := sha256.Sum256([]byte(r.Header.Get(keyName)))
+		valid := 0
+		for _, hk := range hashedKeys {
+			valid |= subtle.ConstantTimeCompare(keyHash[:], hk[:])
 		}
-		if !valid {
+		if valid != 1 {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -115,6 +123,8 @@ func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Han
 func corsMiddleware(origin, keyName string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Frame-Options", "DENY")
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")

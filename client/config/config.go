@@ -36,9 +36,9 @@ type System struct {
 }
 
 type RestServer struct {
-	Addr       string   `toml:"addr"`
-	APIKeyName string   `toml:"api_key_name"`
-	APIKeys    []string `toml:"api_keys"`
+	Addr       string   `toml:"addr" envconfig:"REST_ADDR"`
+	APIKeyName string   `toml:"api_key_name" envconfig:"REST_API_KEY_NAME"`
+	APIKeys    []string `toml:"api_keys" envconfig:"REST_API_KEYS"`
 
 	Title      string `toml:"title"`
 	FSPTitle   string `toml:"fsp_sub_router_title"`
@@ -48,7 +48,7 @@ type RestServer struct {
 	DAPSubpath string `toml:"da_sub_router_path"`
 
 	Version    string `toml:"version"`
-	CORSOrigin string `toml:"cors_origin"`
+	CORSOrigin string `toml:"cors_origin" envconfig:"REST_CORS_ORIGIN"`
 }
 
 type Addresses struct {
