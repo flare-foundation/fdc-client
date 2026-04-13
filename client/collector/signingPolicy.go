@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -154,7 +155,7 @@ func queryNextSPI(
 			ctx, db, params,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetching signing policy logs: %w", err)
 		}
 
 		if len(logs) > 0 {
@@ -166,7 +167,7 @@ func queryNextSPI(
 			for i := range logs {
 				votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[i])
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("adding submit addresses for log %d: %w", i, err)
 				}
 				if votersData.Policy.RewardEpochId.Uint64() > latestRewardEpoch {
 					votersDataArray = append(votersDataArray, votersData)

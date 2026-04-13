@@ -210,7 +210,7 @@ func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
 	added := r.AddAttestation(att)
 	if added {
 		if err := m.AddToQueue(att); err != nil {
-			return err
+			return fmt.Errorf("OnRequest: %w", err)
 		}
 	}
 

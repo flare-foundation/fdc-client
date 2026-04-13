@@ -213,13 +213,13 @@ func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationT
 	attType, err := a.Request.AttestationType()
 	if err != nil {
 		a.Status = ProcessError
-		return err
+		return fmt.Errorf("getting attestation type: %w", err)
 	}
 
 	source, err := a.Request.Source()
 	if err != nil {
 		a.Status = ProcessError
-		return err
+		return fmt.Errorf("getting attestation source: %w", err)
 	}
 
 	attestationTypeConfig, ok := attestationTypesConfigs[attType]
@@ -294,7 +294,7 @@ func (a *Attestation) validateResponse() error {
 func ParseAttestationRequestLog(dbLog database.Log) (*fdchub.FdcHubAttestationRequest, error) {
 	contractLog, err := events.ConvertDatabaseLogToChainLog(dbLog)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("converting database log: %w", err)
 	}
 	return fdcFilterer.ParseAttestationRequest(*contractLog)
 }

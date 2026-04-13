@@ -120,7 +120,7 @@ func (r *Round) ComputeConsensusBitVote() error {
 
 	consensus, err := bitvotes.EnsembleConsensusBitVote(r.bitVotes, fees, r.voterSet.TotalWeight, BitVoteMaxNoOfOperations)
 	if err != nil {
-		return err
+		return fmt.Errorf("computing consensus bitvote: %w", err)
 	}
 
 	r.ConsensusBitVote = consensus
@@ -234,7 +234,7 @@ func (r *Round) MerkleRoot() (common.Hash, error) {
 func (r *Round) ProcessBitVote(message payload.Message) error {
 	bitVote, err := bitvotes.DecodeBitVoteBytes(message.Payload)
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding bitvote bytes: %w", err)
 	}
 
 	if int(bitVote.Length) != len(r.Attestations) {
