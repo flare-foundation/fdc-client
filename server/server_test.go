@@ -22,7 +22,6 @@ import (
 	"github.com/flare-foundation/fdc-client/server"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
 
-	"github.com/bradleyjkemp/cupaloy"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
@@ -114,7 +113,8 @@ func TestServer(t *testing.T) {
 
 		t.Log(rspData)
 		require.Equal(t, payload.Ok, rspData.Status)
-		cupaloy.SnapshotT(t, rspData)
+		require.Equal(t, "0xc8000000010003000101", rspData.Data)
+		require.Equal(t, "", rspData.AdditionalData)
 	})
 
 	t.Run("submitSignatures", func(t *testing.T) {
