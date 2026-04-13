@@ -104,6 +104,7 @@ votes:
 		} else if allZeros {
 			somethingChanged = true
 			fr.AlwaysOutVotes = append(fr.AlwaysOutVotes, i)
+			fr.RemainingWeight -= bitVotes[i].Weight
 
 			delete(fr.RemainingVotes, i)
 		}
