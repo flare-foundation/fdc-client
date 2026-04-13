@@ -19,17 +19,18 @@ import (
 )
 
 const (
-	breakingEpochCoston       = 4506
-	breakingEpochSecondCoston = 4506
+	breakingEpochCoston = 5450 // 5451 uses new address
 
 	breakingEpochCoston2 = 5338
 )
 const (
-	newnewRegistryCoston = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
-	newRegistryCoston    = "0xb4b93a3a3ada93a574e6efeb5f295bf882934cb6"
-	newRegistryCoston2   = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
+	//  new ABI
+	newRegistryCoston  = "0x4C797636FC2410e1BbA7CF4bf2e397d94e65DfB8"
+	newRegistryCoston2 = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
 
-	oldRegistryCoston   = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
+	oldRegistryCoston = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3" // old message
+
+	// old ABI
 	oldRegistrySongbird = "0x31B9EC65C731c7D973a33Ef3FC83B653f540dC8D"
 	oldRegistryCoston2  = "0xc6E40401395DCc648bC4bBb38fE4552423cD9BAC"
 	oldRegistryFlare    = "0x2580101692366e2f331e891180d9ffdF861Fce83"
@@ -53,7 +54,6 @@ func fetchVoterRegisteredEventsForRewardEpoch(ctx context.Context, db *gorm.DB, 
 	eventSelector := voterRegisteredEventSel
 	switch params.Address {
 	case
-		common.HexToAddress(oldRegistryCoston),
 		common.HexToAddress(oldRegistrySongbird),
 		common.HexToAddress(oldRegistryCoston2),
 		common.HexToAddress(oldRegistryFlare):
@@ -117,7 +117,6 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 
 	switch registryContractAddress {
 	case
-		common.HexToAddress(oldRegistryCoston),
 		common.HexToAddress(oldRegistrySongbird),
 		common.HexToAddress(oldRegistryCoston2),
 		common.HexToAddress(oldRegistryFlare):
@@ -149,12 +148,10 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 
 	rewardEpochID := data.RewardEpochId.Uint64()
 
-	if rewardEpochID <= breakingEpochCoston && registryContractAddress == common.HexToAddress(newRegistryCoston) {
-		registryContractAddress = common.HexToAddress(oldRegistryCoston)
-	} else if rewardEpochID <= breakingEpochCoston2 && registryContractAddress == common.HexToAddress(newRegistryCoston2) {
+	if rewardEpochID <= breakingEpochCoston2 && registryContractAddress == common.HexToAddress(newRegistryCoston2) {
 		registryContractAddress = common.HexToAddress(oldRegistryCoston2)
-	} else if rewardEpochID <= breakingEpochSecondCoston && registryContractAddress == common.HexToAddress(newnewRegistryCoston) {
-		registryContractAddress = common.HexToAddress(newRegistryCoston)
+	} else if rewardEpochID <= breakingEpochCoston && registryContractAddress == common.HexToAddress(newRegistryCoston) {
+		registryContractAddress = common.HexToAddress(oldRegistryCoston)
 	}
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
