@@ -194,7 +194,7 @@ queue = "xrp"
 
 
 # XRPPaymentNonexistence
-[types.# XRPPaymentNonexistence]
+[types.XRPPaymentNonexistence]
 abi_path = "configs/abis/XRPPaymentNonexistence.json"
 
 ## XRP
