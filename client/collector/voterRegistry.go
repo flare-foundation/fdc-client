@@ -25,7 +25,7 @@ const (
 )
 const (
 	//  new ABI
-	newRegistryCoston  = "0x4C797636FC2410e1BbA7CF4bf2e397d94e65DfB8"
+	newRegistryCoston  = "0x42F4526BFC6f892DB515a832a52eFc9edFADf6c0"
 	newRegistryCoston2 = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
 
 	oldRegistryCoston = "0xB4B93a3A3ADa93a574E6efeb5f295bf882934cB6" // old message
