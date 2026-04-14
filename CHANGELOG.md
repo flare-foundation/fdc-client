@@ -5,6 +5,7 @@
 ### Changed
 
 - Improved logging.
+- New VoterRegistry address for Coston with smooth transition at reward epoch 5451.
 
 ### Added
 
