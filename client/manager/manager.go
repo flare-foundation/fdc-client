@@ -56,7 +56,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	// without a signing policy.
 	var signingPolicies []shared.VotersData
 
-	go runQueues(ctx, m.queues)
+	runQueues(ctx, m.queues)
 
 	select {
 	case signingPolicies = <-m.signingPolicies:

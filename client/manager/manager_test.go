@@ -14,6 +14,7 @@ import (
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/config"
+	"github.com/flare-foundation/fdc-client/client/round"
 	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
 )
@@ -189,15 +190,29 @@ func TestManager(t *testing.T) {
 		sharedDataPipes.Requests <- []database.Log{currentReqestLog}
 	}
 
-	time.Sleep(1 * time.Second)
-
-	r, ok := mngr.Rounds.Get(664111)
-	require.True(t, ok)
-	require.Equal(t, 3, len(r.Attestations))
-	// send attestation request
-	for i := range 3 {
-		require.Equal(t, attestation.Success, r.Attestations[i].Status)
-	}
+	var r *round.Round
+	require.Eventually(t, func() bool {
+		var ok bool
+		r, ok = mngr.Rounds.Get(664111)
+		if !ok {
+			return false
+		}
+		r.RLock()
+		atts := append([]*attestation.Attestation(nil), r.Attestations...)
+		r.RUnlock()
+		if len(atts) != 3 {
+			return false
+		}
+		for _, a := range atts {
+			a.RLock()
+			status := a.Status
+			a.RUnlock()
+			if status != attestation.Success {
+				return false
+			}
+		}
+		return true
+	}, 5*time.Second, 50*time.Millisecond)
 
 	messages := make([]payload.Message, 0, len(policy.Voters.VoterDataMap))
 
@@ -206,15 +221,21 @@ func TestManager(t *testing.T) {
 		currentLog.From = address
 		messages = append(messages, currentLog)
 	}
-	round := payload.Round{ID: 664111, Messages: messages}
-	sharedDataPipes.BitVotes <- round
+	roundPayload := payload.Round{ID: 664111, Messages: messages}
+	sharedDataPipes.BitVotes <- roundPayload
 
-	time.Sleep(1 * time.Second)
-
-	require.Equal(t, 5, int(r.ConsensusBitVote.BitVector.Int64()))
+	require.Eventually(t, func() bool {
+		r.RLock()
+		defer r.RUnlock()
+		if !r.ConsensusCalculationFinished {
+			return false
+		}
+		if r.ConsensusBitVote.BitVector == nil {
+			return false
+		}
+		return r.ConsensusBitVote.BitVector.Int64() == 5
+	}, 5*time.Second, 50*time.Millisecond)
 
 	cancel()
 	<-ctx.Done()
-
-	time.Sleep(1 * time.Second)
 }
