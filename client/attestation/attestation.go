@@ -106,7 +106,7 @@ type Attestation struct {
 	sync.RWMutex
 }
 
-// EarlierLog returns true if a has lower blockNumber then b or has the same blockNumber and lower LogIndex.
+// EarlierLog returns true if a has lower blockNumber than b or has the same blockNumber and lower LogIndex.
 // Otherwise, it returns false.
 func EarlierLog(a, b IndexLog) bool {
 	if a.BlockNumber < b.BlockNumber {
@@ -205,7 +205,7 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	return nil
 }
 
-// prepareRequest adds response ABI, LUT limit and verifierCredentials to the Attestation.
+// PrepareRequest adds response ABI, LUT limit and verifierCredentials to the Attestation.
 func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationTypes) error {
 	a.Lock()
 	defer a.Unlock()
@@ -299,7 +299,7 @@ func ParseAttestationRequestLog(dbLog database.Log) (*fdchub.FdcHubAttestationRe
 	return fdcFilterer.ParseAttestationRequest(*contractLog)
 }
 
-// index is used to safely retrieve Index for sorting purposes.
+// Index is used to safely retrieve Index for sorting purposes.
 func (a *Attestation) Index() IndexLog {
 	if len(a.Indexes) > 0 {
 		return a.Indexes[0]

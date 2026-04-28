@@ -34,7 +34,7 @@ type DataPipes struct {
 	Status   *Status
 }
 
-// NewDataPipes created new DataPipes.
+// NewDataPipes creates new DataPipes.
 func NewDataPipes() *DataPipes {
 	return &DataPipes{
 		Rounds:   storage.NewCyclic[uint32, *round.Round](RoundBufferSize),
