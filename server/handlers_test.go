@@ -142,8 +142,8 @@ func TestHandleSubmitXOk(t *testing.T) {
 }
 
 func TestSubmitSignaturesBadParams(t *testing.T) {
-	rounds := storage.NewCyclic[uint32, *round.Round](10)
-	ctrl := newFDCProtocolProviderController(&rounds, 200)
+	rounds := storage.New[uint32, *round.Round](10)
+	ctrl := newFDCProtocolProviderController(rounds, 200)
 
 	w := httptest.NewRecorder()
 	r := newReq(http.MethodGet, "/fsp/submitSignatures/x/y", map[string]string{
@@ -156,7 +156,7 @@ func TestSubmitSignaturesBadParams(t *testing.T) {
 }
 
 func makeDAController() DAController {
-	rounds := storage.NewCyclic[uint32, *round.Round](10)
+	rounds := storage.New[uint32, *round.Round](10)
 	r := round.New(1, voters.NewSet(nil, nil, nil))
 	r.Attestations = append(r.Attestations, &attestation.Attestation{
 		Request:   []byte{0x01, 0x02},
@@ -167,7 +167,7 @@ func makeDAController() DAController {
 		Hash:      common.HexToHash("0x123"),
 	})
 	rounds.Store(1, r)
-	return *NewDAController(&rounds)
+	return *NewDAController(rounds)
 }
 
 func TestGetRequestsHandler(t *testing.T) {

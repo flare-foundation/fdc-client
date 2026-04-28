@@ -37,7 +37,7 @@ const (
 )
 
 func TestServer(t *testing.T) {
-	rounds := storage.NewCyclic[uint32, *round.Round](10)
+	rounds := storage.New[uint32, *round.Round](10)
 	serverConfig := config.RestServer{
 		Title:      "FDC protocol data provider API",
 		FSPTitle:   "FDC protocol data provider for FSP client",
@@ -48,7 +48,7 @@ func TestServer(t *testing.T) {
 		APIKeys:    []string{"12345", "123456"},
 	}
 
-	s := server.New(&rounds, 200, serverConfig, shared.NewStatus())
+	s := server.New(rounds, 200, serverConfig, shared.NewStatus())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

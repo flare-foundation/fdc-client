@@ -30,7 +30,7 @@ func TestInfoHandler(t *testing.T) {
 		wantRounds   bool
 		wantOldest   uint32
 		wantNewest   uint32
-		wantEpoch    int64
+		wantEpoch    uint32
 		wantPolicies int
 	}{
 		{

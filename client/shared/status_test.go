@@ -49,13 +49,13 @@ func TestAddPolicyAndSnapshot(t *testing.T) {
 
 	_, _, _, got := s.Snapshot()
 	require.Len(t, got, 2)
-	assert.Equal(t, int64(10), got[0].RewardEpochID)
-	assert.Equal(t, int64(11), got[1].RewardEpochID)
+	assert.Equal(t, uint32(10), got[0].RewardEpochID)
+	assert.Equal(t, uint32(11), got[1].RewardEpochID)
 
 	// Verify snapshot returns a copy.
 	got[0].RewardEpochID = 999
 	_, _, _, fresh := s.Snapshot()
-	assert.Equal(t, int64(10), fresh[0].RewardEpochID)
+	assert.Equal(t, uint32(10), fresh[0].RewardEpochID)
 }
 
 func TestPrunePolicies(t *testing.T) {
@@ -69,7 +69,7 @@ func TestPrunePolicies(t *testing.T) {
 
 	_, _, _, got := s.Snapshot()
 	require.Len(t, got, 1)
-	assert.Equal(t, int64(7), got[0].RewardEpochID)
+	assert.Equal(t, uint32(7), got[0].RewardEpochID)
 }
 
 func TestPrunePoliciesEmpty(t *testing.T) {

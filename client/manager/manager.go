@@ -20,7 +20,7 @@ import (
 )
 
 type Manager struct {
-	Rounds                storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer RoundBufferSize.
+	Rounds                *storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer RoundBufferSize.
 	lastRoundCreated      uint32
 	requests              <-chan []database.Log
 	bitVotes              <-chan payload.Round

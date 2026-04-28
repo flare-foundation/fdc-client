@@ -9,12 +9,17 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/events"
 )
 
-func ParseVoterRegisteredEvent(dbLog database.Log) (*RegistryVoterRegistered, error) {
-	filterer, err := NewRegistryFilterer(common.Address{}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating registry filterer: %w", err)
-	}
+var filterer *RegistryFilterer
 
+func init() {
+	var err error
+	filterer, err = NewRegistryFilterer(common.Address{}, nil)
+	if err != nil {
+		panic(fmt.Sprintf("creating registry filterer: %s", err))
+	}
+}
+
+func ParseVoterRegisteredEvent(dbLog database.Log) (*RegistryVoterRegistered, error) {
 	contractLog, err := events.ConvertDatabaseLogToChainLog(dbLog)
 	if err != nil {
 		return nil, fmt.Errorf("converting database log: %w", err)

@@ -3,7 +3,6 @@ package collector_test
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 
 	"testing"
 	"time"
@@ -36,17 +35,23 @@ var (
 	funcSel            = [4]byte{1, 2, 3, 4}
 )
 
-func InMemoryDB(t *testing.T, name string) *gorm.DB {
+func InMemoryDB(t *testing.T, _ string) *gorm.DB {
 	t.Helper()
-	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", name)
 
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info),
 	})
 
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+
 	return db
 }
 

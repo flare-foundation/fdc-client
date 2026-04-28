@@ -21,9 +21,9 @@ import (
 func makeController(t *testing.T) *server.DAController {
 	t.Helper()
 
-	rounds := storage.NewCyclic[uint32, *round.Round](10)
+	rounds := storage.New[uint32, *round.Round](10)
 
-	controller := server.NewDAController(&rounds)
+	controller := server.NewDAController(rounds)
 
 	hash := common.HexToHash("0x232")
 

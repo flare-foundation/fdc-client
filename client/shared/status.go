@@ -4,7 +4,7 @@ import "sync"
 
 // SigningPolicySummary holds identifying fields of a stored signing policy.
 type SigningPolicySummary struct {
-	RewardEpochID      int64  `json:"rewardEpochID"`
+	RewardEpochID      uint32 `json:"rewardEpochID"`
 	StartVotingRoundID uint32 `json:"startVotingRoundID"`
 	VoterCount         int    `json:"voterCount"`
 }
@@ -60,9 +60,9 @@ func (s *Status) PrunePolicies(deleted []uint32) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	removedSet := make(map[int64]bool, len(deleted))
+	removedSet := make(map[uint32]bool, len(deleted))
 	for _, id := range deleted {
-		removedSet[int64(id)] = true
+		removedSet[id] = true
 	}
 
 	kept := make([]SigningPolicySummary, 0, len(s.signingPolicies))

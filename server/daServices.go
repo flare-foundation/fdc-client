@@ -113,7 +113,7 @@ func attestationToDAAttestation(att *attestation.Attestation) (DAAttestation, bo
 }
 
 func (a *DAAttestation) addProof(tree merkle.Tree) error {
-	proofCommon, err := tree.GetProofFromHash(a.hash)
+	proofCommon, err := tree.ProofFromHash(a.hash)
 	if err != nil {
 		return fmt.Errorf("no proof for request %s in round %d", a.Request, a.RoundID)
 	}

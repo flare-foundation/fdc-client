@@ -128,44 +128,13 @@ func (c *Collector) Run(ctx context.Context) {
 
 // WaitForDBToSync waits for db to sync. After many unsuccessful attempts it panics.
 func (c *Collector) WaitForDBToSync(ctx context.Context) {
-	k := 0
-	for k < syncRetry {
-		if k > 0 {
-			logger.Debugf("Checking database for %v/%v time", k, syncRetry)
-		}
-		state, err := database.FetchState(ctx, c.DB, nil)
-		if err != nil {
-			logger.Panicf("database: %v", err)
-		}
-
-		dbTime := time.Unix(int64(state.BlockTimestamp), 0)
-
-		outOfSync := time.Since(dbTime)
-		if outOfSync < outOfSyncTolerance {
-			logger.Debug("Database in sync")
-			return
-		}
-
-		logger.Warnf("Database out of sync. Delayed for %v", outOfSync)
-		sleepTime := min(maxSleepTime, outOfSync/20)
-		sleepTime = max(sleepTime, minSleepTime)
-		logger.Warnf("Sleeping for %v", sleepTime)
-		k++
-		time.Sleep(sleepTime)
+	params := database.SyncParams{
+		Retries:            syncRetry,
+		OutOfSyncTolerance: outOfSyncTolerance,
+		MaxSleepTime:       maxSleepTime,
+		MinSleepTime:       minSleepTime,
 	}
-
-	logger.Warnf("Checking database for the final time")
-	state, err := database.FetchState(ctx, c.DB, nil)
-	if err != nil {
+	if err := database.WaitCIndexerToSync(ctx, c.DB, params, logger.Logger()); err != nil {
 		logger.Panicf("database: %v", err)
-	}
-
-	dbTime := time.Unix(int64(state.BlockTimestamp), 0)
-
-	outOfSync := time.Since(dbTime)
-	if outOfSync > outOfSyncTolerance {
-		logger.Panicf("Database out of sync after %v retries. Delayed for %v", syncRetry, outOfSync)
-	} else {
-		logger.Debug("Database in sync")
 	}
 }

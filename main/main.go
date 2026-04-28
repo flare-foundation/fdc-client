@@ -60,7 +60,7 @@ func main() {
 	go mngr.Run(ctx, cancel)
 
 	// Run attestation client server
-	srv := server.New(&sharedDataPipes.Rounds, userConfigRaw.ProtocolID, userConfigRaw.RestServer, sharedDataPipes.Status)
+	srv := server.New(sharedDataPipes.Rounds, userConfigRaw.ProtocolID, userConfigRaw.RestServer, sharedDataPipes.Status)
 	go srv.Run(ctx)
 	logger.Info("Running server")
 

@@ -24,7 +24,7 @@ type InfoResponse struct {
 	HasRounds       bool                          `json:"hasRounds"`
 	OldestRound     uint32                        `json:"oldestRound"`
 	NewestRound     uint32                        `json:"newestRound"`
-	CurrentEpoch    int64                         `json:"currentEpoch"`
+	CurrentEpoch    uint32                        `json:"currentEpoch"`
 	RoundBufferSize int                           `json:"roundBufferSize"`
 	SigningPolicies []shared.SigningPolicySummary `json:"signingPolicies"`
 	ServerTime      int64                         `json:"serverTime"`
@@ -33,7 +33,7 @@ type InfoResponse struct {
 func (c *infoController) info(w http.ResponseWriter, _ *http.Request) {
 	oldest, newest, hasRounds, policies := c.source.Snapshot()
 
-	var currentEpoch int64
+	var currentEpoch uint32
 	if len(policies) > 0 {
 		currentEpoch = policies[len(policies)-1].RewardEpochID
 	}
