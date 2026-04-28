@@ -42,14 +42,11 @@ func ArgumentsFromABI(abiBytes []byte) (abi.Arguments, error) {
 
 // parseSource takes sourceBig and converts LUTLimit from big.int to uint64.
 func parseSource(sourceConfigBig sourceBig) (Source, error) {
+	if sourceConfigBig.LUTLimit == nil {
+		return Source{}, errors.New("lutLimit is required")
+	}
 	if !sourceConfigBig.LUTLimit.IsUint64() {
-		return Source{
-				URL:       sourceConfigBig.URL,
-				APIKey:    sourceConfigBig.APIKey,
-				LUTLimit:  0,
-				QueueName: sourceConfigBig.QueueName,
-			},
-			errors.New("lutLimit does not fit in uint64")
+		return Source{}, errors.New("lutLimit does not fit in uint64")
 	}
 
 	return Source{
@@ -106,7 +103,7 @@ func parseSources(sourcesConfigUnparsed map[string]sourceBig) (map[[32]byte]Sour
 func StringToByte32(str string) ([32]byte, error) {
 	var strBytes [32]byte
 	if len(str) > 32 {
-		return strBytes, fmt.Errorf("string %s to long", str)
+		return strBytes, fmt.Errorf("string %s too long", str)
 	}
 
 	copy(strBytes[:], []byte(str))
