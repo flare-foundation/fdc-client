@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 )
 
 // ParseAttestationTypes parses AttestationTypesUnparsed as read from toml file into AttestationTypes.
@@ -45,14 +46,15 @@ func parseSource(sourceConfigBig sourceBig) (Source, error) {
 	if sourceConfigBig.LUTLimit == nil {
 		return Source{}, errors.New("lutLimit is required")
 	}
-	if !sourceConfigBig.LUTLimit.IsUint64() {
-		return Source{}, errors.New("lutLimit does not fit in uint64")
+	lutLimit, err := convert.BigToUint64Safe(sourceConfigBig.LUTLimit)
+	if err != nil {
+		return Source{}, fmt.Errorf("lutLimit: %w", err)
 	}
 
 	return Source{
 			URL:       sourceConfigBig.URL,
 			APIKey:    sourceConfigBig.APIKey,
-			LUTLimit:  sourceConfigBig.LUTLimit.Uint64(),
+			LUTLimit:  lutLimit,
 			QueueName: sourceConfigBig.QueueName,
 		},
 		nil

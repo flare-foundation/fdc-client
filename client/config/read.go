@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/BurntSushi/toml"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/flare-foundation/go-flare-common/pkg/toml"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -53,7 +53,7 @@ func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 }
 
 func ReadUserRaw(filePath string) (UserRaw, error) {
-	return readToml[UserRaw](filePath)
+	return toml.Read[UserRaw](filePath, true)
 }
 
 func ReadSystem(directory, chain string, protocolID uint8) (System, error) {
@@ -61,23 +61,7 @@ func ReadSystem(directory, chain string, protocolID uint8) (System, error) {
 	protocolStr := strconv.FormatUint(uint64(protocolID), 10)
 	filePath := path.Join(directory, protocolStr, chain)
 
-	return readToml[System](filePath)
-}
-
-func readToml[C any](filePath string) (C, error) {
-	var config C
-
-	file, err := os.ReadFile(filePath)
-	if err != nil {
-		return config, fmt.Errorf("failed reading file %s: %w", filePath, err)
-	}
-
-	err = toml.Unmarshal(file, &config)
-	if err != nil {
-		return config, fmt.Errorf("failed unmarshaling file %s: %w", filePath, err)
-	}
-
-	return config, nil
+	return toml.Read[System](filePath, true)
 }
 
 // ReadABI reads abi of a struct from a JSON file and converts it into abi.Arguments and string representation.

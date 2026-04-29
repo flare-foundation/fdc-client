@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/flare-foundation/fdc-client/client/utils"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 )
 
 type FilterResults struct {
@@ -175,10 +175,10 @@ func (f *AggregatedBit) Value(totalWeight uint16, cache bool) Value {
 func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *FilterResults) []*AggregatedBit {
 	aggregator := map[string]*AggregatedBit{}
 
-	remainingBitsSorted := utils.Keys(filterResults.RemainingBits)
+	remainingBitsSorted := convert.MapToKeySlice(filterResults.RemainingBits)
 	slices.Sort(remainingBitsSorted)
 
-	remainingVotesSorted := utils.Keys(filterResults.RemainingVotes)
+	remainingVotesSorted := convert.MapToKeySlice(filterResults.RemainingVotes)
 	slices.Sort(remainingVotesSorted)
 
 	for _, i := range remainingBitsSorted {
@@ -213,7 +213,7 @@ func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *
 		}
 	}
 
-	return utils.Values(aggregator)
+	return convert.MapToValueSlice(aggregator)
 }
 
 type AggregatedVote struct {
@@ -226,10 +226,10 @@ type AggregatedVote struct {
 func AggregateVotes(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *FilterResults) []*AggregatedVote {
 	aggregator := map[string]*AggregatedVote{}
 
-	remainingBitsSorted := utils.Keys(filterResults.RemainingBits)
+	remainingBitsSorted := convert.MapToKeySlice(filterResults.RemainingBits)
 	slices.Sort(remainingBitsSorted)
 
-	remainingVotesSorted := utils.Keys(filterResults.RemainingVotes)
+	remainingVotesSorted := convert.MapToKeySlice(filterResults.RemainingVotes)
 	slices.Sort(remainingVotesSorted)
 
 	for _, i := range remainingVotesSorted {
@@ -267,7 +267,7 @@ func AggregateVotes(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults 
 		}
 	}
 
-	return utils.Values(aggregator)
+	return convert.MapToValueSlice(aggregator)
 }
 
 func FilterAndAggregate(bitVotes []*WeightedBitVote, fees []*big.Int, totalWeight uint16) ([]*AggregatedVote, []*AggregatedBit, *FilterResults) {

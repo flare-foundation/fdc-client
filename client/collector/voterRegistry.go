@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
@@ -84,12 +85,10 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 		return shared.VotersData{}, fmt.Errorf("parsing signing policy initialized event: %w", err)
 	}
 
-	ok := data.RewardEpochId.IsUint64()
-	if !ok {
-		return shared.VotersData{}, fmt.Errorf("reward epoch %v too high", data.RewardEpochId)
+	rewardEpochID, err := convert.BigToUint64Safe(data.RewardEpochId)
+	if err != nil {
+		return shared.VotersData{}, fmt.Errorf("reward epoch %v: %w", data.RewardEpochId, err)
 	}
-
-	rewardEpochID := data.RewardEpochId.Uint64()
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
 	if err != nil {
