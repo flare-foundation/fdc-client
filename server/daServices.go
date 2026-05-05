@@ -9,8 +9,10 @@ import (
 	"github.com/flare-foundation/fdc-client/client/attestation"
 )
 
-func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
-	round, exists := c.rounds.Get(roundId)
+// GetRequests returns the list of attestation requests for the given round.
+// The bool return is false if the round is not in the cache.
+func (c *DAController) GetRequests(roundID uint32) ([]DARequest, bool) {
+	round, exists := c.rounds.Get(roundID)
 	if !exists {
 		return nil, false
 	}
@@ -24,6 +26,7 @@ func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
 	return requests, true
 }
 
+// AttestationToDARequest converts an internal Attestation into the public DARequest representation.
 func AttestationToDARequest(att *attestation.Attestation) DARequest {
 	att.RLock()
 	defer att.RUnlock()
@@ -52,8 +55,10 @@ func AttestationToDARequest(att *attestation.Attestation) DARequest {
 	return dARequest
 }
 
-func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
-	round, exists := c.rounds.Get(roundId)
+// GetAttestations returns the confirmed and selected attestations for the given round, each with a Merkle proof.
+// The bool return is false if the round is not in the cache or its Merkle tree cannot be computed.
+func (c *DAController) GetAttestations(roundID uint32) ([]DAAttestation, bool) {
+	round, exists := c.rounds.Get(roundID)
 	if !exists {
 		return nil, false
 	}

@@ -18,6 +18,8 @@ func Prepend[T any](slice []T, element T) []T {
 	return slice
 }
 
+// Invert returns a new map whose keys and values are swapped.
+// If m has duplicate values, only one of the corresponding keys is preserved.
 func Invert[K comparable, V comparable](m map[K]V) map[V]K {
 	invertedMap := make(map[V]K)
 	for k, v := range m {
@@ -27,6 +29,7 @@ func Invert[K comparable, V comparable](m map[K]V) map[V]K {
 	return invertedMap
 }
 
+// Bytes32ToString returns b as a string with trailing zero bytes stripped.
 func Bytes32ToString(b [32]byte) string {
 	return string(bytes.Trim(b[:], "\x00"))
 }

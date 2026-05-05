@@ -21,6 +21,7 @@ const (
 	systemDirectory string = "configs/systemConfigs" // relative to project root
 )
 
+// CfgFlag is the path to the user toml configuration file.
 var CfgFlag = flag.String("config", "configs/userConfig.toml", "Configuration file (toml format)")
 
 func main() {

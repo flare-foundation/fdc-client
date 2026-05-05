@@ -17,6 +17,7 @@ const (
 	RoundBufferSize         int = 256
 )
 
+// VotersData pairs a signing policy with the lookup from each voter's submit address to its signing address.
 type VotersData struct {
 	Policy                 *relay.RelaySigningPolicyInitialized
 	SubmitToSigningAddress map[common.Address]common.Address

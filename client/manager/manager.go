@@ -19,6 +19,8 @@ import (
 	"github.com/flare-foundation/fdc-client/client/utils"
 )
 
+// Manager drives the per-round lifecycle: it consumes requests, bitVotes, and signing policies from the collector,
+// builds rounds, and publishes them through the shared storage.
 type Manager struct {
 	Rounds                *storage.Cyclic[uint32, *round.Round] // cyclically cached rounds with buffer RoundBufferSize.
 	lastRoundCreated      uint32

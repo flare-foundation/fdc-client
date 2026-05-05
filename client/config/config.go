@@ -20,21 +20,25 @@ type userCommon struct {
 	Logging    logger.Config   `toml:"logger"`
 }
 
+// UserRaw is the user configuration as read from the toml file, with attestation types still in their unparsed form.
 type UserRaw struct {
 	AttestationTypeConfig AttestationTypesUnparsed `toml:"types"`
 	userCommon
 }
 
+// User is the user configuration with attestation types parsed into their runtime representation.
 type User struct {
 	AttestationsConfig AttestationTypes
 	userCommon
 }
 
+// System holds chain-specific configuration shared across users of the same chain and protocol.
 type System struct {
 	Addresses Addresses `toml:"addresses"`
 	Timing    Timing    `toml:"timing"`
 }
 
+// RestServer holds the configuration for the REST server: bind address, API key auth, route titles, and CORS.
 type RestServer struct {
 	Addr       string   `toml:"addr" envconfig:"REST_ADDR"`
 	APIKeyName string   `toml:"api_key_name" envconfig:"REST_API_KEY_NAME"`
@@ -51,6 +55,7 @@ type RestServer struct {
 	CORSOrigin string `toml:"cors_origin" envconfig:"REST_CORS_ORIGIN"`
 }
 
+// Addresses holds the on-chain contract addresses the client interacts with.
 type Addresses struct {
 	SubmitContract        common.Address `toml:"submit_contract"`
 	RelayContract         common.Address `toml:"relay_contract"`
@@ -58,6 +63,7 @@ type Addresses struct {
 	VoterRegistryContract common.Address `toml:"voter_registry_contract"`
 }
 
+// Source describes a single verifier endpoint used for an attestation type.
 type Source struct {
 	URL       string
 	APIKey    string
@@ -72,21 +78,26 @@ type sourceBig struct {
 	QueueName string   `toml:"queue"`
 }
 
+// AttestationType is a parsed attestation type with its response ABI and per-source configuration.
 type AttestationType struct {
 	ResponseArguments abi.Arguments
 	ResponseABIString string
 	SourcesConfig     map[[32]byte]Source
 }
 
+// AttestationTypeUnparsed is an attestation type as read from the toml file, before the ABI is loaded from disk.
 type AttestationTypeUnparsed struct {
 	ABIPath string               `toml:"abi_path"`
 	Sources map[string]sourceBig `toml:"sources"`
 }
 
+// AttestationTypes maps an attestation type identifier to its parsed configuration.
 type AttestationTypes map[[32]byte]AttestationType
 
+// AttestationTypesUnparsed maps an attestation type name to its raw toml configuration.
 type AttestationTypesUnparsed map[string]AttestationTypeUnparsed
 
+// Timing holds chain timing parameters that drive round scheduling.
 type Timing struct {
 	T0                 uint64 `toml:"t0"`
 	T0RewardDelay      uint64 `toml:"t0_reward_delay"`
@@ -95,4 +106,5 @@ type Timing struct {
 	ChooseDurationSec  uint64 `toml:"choose_duration_sec"`
 }
 
+// Queues maps a queue name to its priority parameters.
 type Queues map[string]priority.Params

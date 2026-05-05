@@ -19,8 +19,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-const BitVoteMaxNoOfOperations = 20_000_000 // maximal number of operations in the BitVote algorithm
+// BitVoteMaxNoOfOperations is the maximum number of operations the BitVote consensus algorithm may perform per round.
+const BitVoteMaxNoOfOperations = 20_000_000
 
+// Round groups the attestations and bitVotes for a single voting round.
 type Round struct {
 	ID                           uint32
 	Status                       *attestation.RoundStatusMutex

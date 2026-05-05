@@ -52,10 +52,12 @@ func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 	return &userConfigRaw, &systemConfig, nil
 }
 
+// ReadUserRaw reads a UserRaw configuration from a toml file at filePath.
 func ReadUserRaw(filePath string) (UserRaw, error) {
 	return toml.Read[UserRaw](filePath, true)
 }
 
+// ReadSystem reads the System configuration for the given chain and protocolID from <directory>/<protocolID>/<chain>.toml.
 func ReadSystem(directory, chain string, protocolID uint8) (System, error) {
 	chain += ".toml"
 	protocolStr := strconv.FormatUint(uint64(protocolID), 10)

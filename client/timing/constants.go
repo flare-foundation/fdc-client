@@ -12,6 +12,8 @@ const (
 	defaultChooseDurationSec  = 45
 )
 
+// Chain holds the active chain timing parameters used by the rest of the client.
+// It is initialised with defaults and overridden via Set when a system configuration is loaded.
 var Chain config.Timing = config.Timing{
 	T0:                 defaultT0,
 	T0RewardDelay:      defaultT0RewardDelay,
