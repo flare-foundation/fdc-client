@@ -80,6 +80,8 @@ github.com/ferranbt/fastssz v0.1.4 h1:OCDB+dYDEQDvAgtAGnTSidK1Pe2tW3nFV40XyMkTeD
 github.com/ferranbt/fastssz v0.1.4/go.mod h1:Ea3+oeoRGGLGm5shYAeDgu6PGUlcvQhE2fILyD9+tGg=
 github.com/flare-foundation/go-flare-common v1.2.0 h1:6xkFMr/qZGMw6ULWw6uaDLhiHls2XK1D/FEVDRFihC8=
 github.com/flare-foundation/go-flare-common v1.2.0/go.mod h1:u844RxubdWw9KNXV+1N6aud6lQsYrhg2nz8acJB9MCw=
+github.com/flare-foundation/go-flare-common v1.2.1 h1:lxgO9X/XHJMdsDLk8Si98hpT6/WlBH0YEawZI14BjcY=
+github.com/flare-foundation/go-flare-common v1.2.1/go.mod h1:u844RxubdWw9KNXV+1N6aud6lQsYrhg2nz8acJB9MCw=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=
