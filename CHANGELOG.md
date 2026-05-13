@@ -1,6 +1,12 @@
 # Changelog
 
-## [v1.2.9](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-4-?
+## [v1.2.10](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-5-13
+
+### Fixed
+
+- Payload parsing fix in go-flare-common with version v1.2.1
+
+## [v1.2.9](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-4-14
 
 ### Changed
 
