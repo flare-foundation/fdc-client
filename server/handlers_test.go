@@ -330,3 +330,26 @@ func TestCORSMiddleware(t *testing.T) {
 		assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
 	})
 }
+
+func TestRecoveryMiddleware(t *testing.T) {
+	t.Run("recovers from panic and returns 500", func(t *testing.T) {
+		handler := recoveryMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			panic("boom")
+		}))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+		require.NotPanics(t, func() { handler.ServeHTTP(w, r) })
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	t.Run("re-panics on ErrAbortHandler", func(t *testing.T) {
+		handler := recoveryMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			panic(http.ErrAbortHandler)
+		}))
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/test", nil)
+
+		assert.PanicsWithValue(t, http.ErrAbortHandler, func() { handler.ServeHTTP(w, r) })
+	})
+}

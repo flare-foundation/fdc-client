@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
@@ -55,7 +56,7 @@ func New(
 	mux.Handle("GET /info", auth(ic.info))
 
 	srv := &http.Server{
-		Handler:           corsMiddleware(serverConfig.CORSOrigin, serverConfig.APIKeyName, mux),
+		Handler:           recoveryMiddleware(corsMiddleware(serverConfig.CORSOrigin, serverConfig.APIKeyName, mux)),
 		Addr:              serverConfig.Addr,
 		ReadHeaderTimeout: 15 * time.Second,
 		WriteTimeout:      15 * time.Second,
@@ -118,6 +119,26 @@ func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Han
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// recoveryMiddleware recovers from panics in downstream handlers, logs the panic with a
+// stack trace, and returns a generic 500 to the client instead of dropping the connection.
+// It re-panics on http.ErrAbortHandler so net/http can handle that intentional abort.
+func recoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			rec := recover()
+			if rec == nil {
+				return
+			}
+			if rec == http.ErrAbortHandler {
+				panic(rec)
+			}
+			logger.Errorf("panic serving %s %s: %v\n%s", r.Method, r.URL.Path, rec, debug.Stack())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}()
 		next.ServeHTTP(w, r)
 	})
 }
