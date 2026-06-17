@@ -63,6 +63,8 @@ func (r *Round) AddAttestation(attToAdd *attestation.Attestation) bool {
 	identifier := crypto.Keccak256Hash(attToAdd.Request)
 	att, exists := r.attestationMap[identifier]
 	if exists {
+		att.Lock()
+		defer att.Unlock()
 		att.Fee.Add(att.Fee, attToAdd.Fee)
 		if attestation.EarlierLog(attToAdd.Index(), att.Index()) {
 			att.Indexes = utils.Prepend(att.Indexes, attToAdd.Index())
