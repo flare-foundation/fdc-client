@@ -32,6 +32,14 @@ func main() {
 	}
 	logger.Set(userConfigRaw.Logging)
 
+	configWarnings, err := userConfigRaw.Validate()
+	for _, w := range configWarnings {
+		logger.Warn(w)
+	}
+	if err != nil {
+		logger.Panicf("invalid config: %s", err)
+	}
+
 	err = timing.Set(systemConfig.Timing)
 	if err != nil {
 		logger.Panicf("cannot set timing: %s", err)
