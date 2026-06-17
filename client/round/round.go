@@ -3,10 +3,12 @@ package round
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"sync"
 
+	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/merkle"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
 	"github.com/flare-foundation/go-flare-common/pkg/voters"
@@ -72,6 +74,11 @@ func (r *Round) AddAttestation(attToAdd *attestation.Attestation) bool {
 			att.Indexes = append(att.Indexes, attToAdd.Index())
 		}
 
+		return false
+	}
+
+	if len(r.Attestations) >= math.MaxUint16 {
+		logger.Warnf("more than 65535 attestation requests in round: discarding %v", identifier)
 		return false
 	}
 

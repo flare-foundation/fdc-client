@@ -317,7 +317,7 @@ func BitVoteFromAttestations(attestations []*Attestation) (bitvotes.BitVote, err
 
 	// Max bitVector size for bitVote is fits into 2 bytes (65536 bits)
 	if len(attestations) > math.MaxUint16 {
-		return bitvotes.BitVote{}, errors.New("more than 65536 attestations")
+		return bitvotes.BitVote{}, errors.New("more than 65535 attestations")
 	}
 
 	for i, a := range attestations {
