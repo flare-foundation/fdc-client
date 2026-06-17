@@ -11,10 +11,14 @@ import (
 )
 
 const (
-	bitVoteBufferSize           = 2
-	requestsBufferSize          = 10
-	signingPolicyBufferSize     = 3
-	RoundBufferSize         int = 256
+	bitVoteBufferSize       = 2
+	requestsBufferSize      = 10
+	signingPolicyBufferSize = 3
+	// RoundBufferSize is the number of most-recent rounds kept in memory (a cyclic
+	// buffer keyed by round id). At ~90s per round this is roughly 2h of history.
+	// It must stay larger than the furthest-back round any consumer reads (DA proof
+	// queries, FSP commit/reveal); reduced from 256 to bound worst-case heap under load.
+	RoundBufferSize int = 80
 )
 
 // VotersData pairs a signing policy with the lookup from each voter's submit address to its signing address.
