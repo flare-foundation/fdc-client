@@ -19,6 +19,12 @@ import (
 	"github.com/flare-foundation/fdc-client/client/utils"
 )
 
+// consensusChanBuffer bounds how many rounds can await consensus computation. Consensus is
+// triggered once per round (at choose-end), so a small buffer absorbs the rare on-chain/off-chain
+// double-trigger or a catch-up burst without blocking the ingest loop; the dispatch send is
+// ctx-aware so a full buffer can never hang the loop.
+const consensusChanBuffer = 4
+
 // Manager drives the per-round lifecycle: it consumes requests, bitVotes, and signing policies from the collector,
 // builds rounds, and publishes them through the shared storage.
 type Manager struct {
@@ -31,6 +37,7 @@ type Manager struct {
 	attestationTypeConfig config.AttestationTypes
 	queues                attestationQueues
 	status                *shared.Status
+	consensusCh           chan *round.Round // rounds dispatched to the consensus worker goroutine
 }
 
 // New initializes attestation round manager from raw user configurations.
@@ -48,6 +55,7 @@ func New(configs *config.UserRaw, attestationTypeConfig config.AttestationTypes,
 			bitVotes:              sharedDataPipes.BitVotes,
 			requests:              sharedDataPipes.Requests,
 			status:                sharedDataPipes.Status,
+			consensusCh:           make(chan *round.Round, consensusChanBuffer),
 		},
 		nil
 }
@@ -59,6 +67,8 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 	var signingPolicies []shared.VotersData
 
 	runQueues(ctx, m.queues)
+
+	go m.runConsensusWorker(ctx)
 
 	select {
 	case signingPolicies = <-m.signingPolicies:
@@ -120,20 +130,14 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 				break
 			}
 
-			now := time.Now()
-			err := r.ComputeConsensusBitVote()
-			logger.Debugf("BitVote algorithm finished in %s", time.Since(now))
-			if err != nil {
-				logger.Warnf("Failed bitVote in round %d: %s", bvsForRound.ID, err)
-			} else {
-				logger.Debugf("Consensus bitVote %s for round %d computed.", r.ConsensusBitVote.EncodeBitVoteHex(), bvsForRound.ID)
-
-				noOfRetried, err := m.retryUnsuccessfulChosen(ctx, r)
-				if err != nil {
-					logger.Warnf("retrying round %d: %v", r.ID, err)
-				} else if noOfRetried > 0 {
-					logger.Debugf("retrying %d attestations in round %d", noOfRetried, r.ID)
-				}
+			// Dispatch the heavy consensus computation to the worker so it does not block
+			// ingestion of requests, bitVotes, and signing policies. The send is ctx-aware
+			// so a stopped worker cannot deadlock the ingest loop.
+			select {
+			case m.consensusCh <- r:
+			case <-ctx.Done():
+				logger.Infof("Manager exiting: %v", ctx.Err())
+				return
 			}
 
 		case requests := <-m.requests:
@@ -148,6 +152,54 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			logger.Infof("Manager exiting: %v", ctx.Err())
 			return
 		}
+	}
+}
+
+// runConsensusWorker computes consensus bitVotes off the ingest goroutine, so heavy consensus
+// computation does not block ingestion of requests, bitVotes, and signing policies.
+func (m *Manager) runConsensusWorker(ctx context.Context) {
+	for {
+		select {
+		case r := <-m.consensusCh:
+			m.computeConsensus(ctx, r)
+
+		case <-ctx.Done():
+			logger.Infof("consensus worker exiting: %v", ctx.Err())
+			return
+		}
+	}
+}
+
+// computeConsensus computes the consensus bitVote for a round and retries chosen-but-unconfirmed
+// attestations. It is idempotent (a round whose consensus already finished is skipped) and recovers
+// from panics so a single bad round cannot stop consensus for all future rounds.
+func (m *Manager) computeConsensus(ctx context.Context, r *round.Round) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			logger.Errorf("recovered panic computing consensus for round %d: %v", r.ID, rec)
+		}
+	}()
+
+	if _, _, finished := r.GetConsensusBitVote(); finished {
+		return // already computed (e.g. duplicate on-chain/off-chain trigger)
+	}
+
+	now := time.Now()
+	err := r.ComputeConsensusBitVote()
+	logger.Debugf("BitVote algorithm finished in %s", time.Since(now))
+	if err != nil {
+		logger.Warnf("Failed bitVote in round %d: %s", r.ID, err)
+		return
+	}
+
+	bitVote, _, _ := r.GetConsensusBitVote()
+	logger.Debugf("Consensus bitVote %s for round %d computed.", bitVote.EncodeBitVoteHex(), r.ID)
+
+	noOfRetried, err := m.retryUnsuccessfulChosen(ctx, r)
+	if err != nil {
+		logger.Warnf("retrying round %d: %v", r.ID, err)
+	} else if noOfRetried > 0 {
+		logger.Debugf("retrying %d attestations in round %d", noOfRetried, r.ID)
 	}
 }
 
@@ -264,21 +316,24 @@ func VotersDataCheck(data shared.VotersData) error {
 func (m *Manager) retryUnsuccessfulChosen(ctx context.Context, round *round.Round) (int, error) {
 	count := 0 // only for logging
 
-	for i := range round.Attestations {
+	// Snapshot under the round read lock so the worker goroutine does not race a concurrent
+	// AddAttestation append on the ingest goroutine.
+	atts := round.AttestationsSnapshot()
+	for i := range atts {
 		err := func() error {
-			round.Attestations[i].RLock()
-			defer round.Attestations[i].RUnlock()
+			atts[i].RLock()
+			defer atts[i].RUnlock()
 
-			if round.Attestations[i].Consensus && round.Attestations[i].Status != attestation.Success {
-				queueName := round.Attestations[i].QueueName
+			if atts[i].Consensus && atts[i].Status != attestation.Success {
+				queueName := atts[i].QueueName
 
 				queue, ok := m.queues[queueName]
 				if !ok {
 					return fmt.Errorf("retry: no queue: %s", queueName)
 				}
 
-				weight := attestation.Weight{Index: round.Attestations[i].Index()}
-				_, err := queue.AddFast(ctx, round.Attestations[i], weight)
+				weight := attestation.Weight{Index: atts[i].Index()}
+				_, err := queue.AddFast(ctx, atts[i], weight)
 				if err != nil {
 					return fmt.Errorf("adding fast to %s: %w", queueName, err)
 				}

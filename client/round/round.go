@@ -133,6 +133,10 @@ func (r *Round) ComputeConsensusBitVote() error {
 	r.Lock()
 	defer r.Unlock()
 
+	if r.ConsensusCalculationFinished {
+		return nil // a round's consensus is computed at most once (guards duplicate dispatch)
+	}
+
 	defer func() { r.ConsensusCalculationFinished = true }()
 	r.sortAttestations()
 
@@ -262,6 +266,11 @@ func (r *Round) ProcessBitVote(message payload.Message) error {
 	if err != nil {
 		return fmt.Errorf("decoding bitvote bytes: %w", err)
 	}
+
+	// The round lock guards r.Attestations, r.bitVotes, and r.bitVoteCheckList, which
+	// ComputeConsensusBitVote reads under the same lock from the consensus worker goroutine.
+	r.Lock()
+	defer r.Unlock()
 
 	if int(bitVote.Length) != len(r.Attestations) {
 		return fmt.Errorf("got bits %d, have %d attestations", int(bitVote.Length), len(r.Attestations))
