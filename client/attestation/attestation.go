@@ -180,6 +180,11 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	a.Lock()
 	defer a.Unlock()
 
+	// Re-check under the lock so a redundant handling cannot downgrade a confirmed Success.
+	if a.Status == Success {
+		return nil
+	}
+
 	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError

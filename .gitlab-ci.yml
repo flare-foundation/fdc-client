@@ -38,11 +38,11 @@ test:
   needs: [build]
   extends: .gocache
   before_script:
-    - go get github.com/boumenot/gocover-cobertura
+    - go install github.com/boumenot/gocover-cobertura@v1.5.0
   script:
     - go test -v -coverpkg=github.com/flare-foundation/fdc-client/... -coverprofile=${COVERAGE_FILE} -covermode count ./...
     - go tool cover -func=${COVERAGE_FILE}
-    - go run github.com/boumenot/gocover-cobertura < ${COVERAGE_FILE} > ${COBERTURA_FILE}
+    - ${GOPATH}/bin/gocover-cobertura < ${COVERAGE_FILE} > ${COBERTURA_FILE}
   artifacts:
     paths:
       - ${COVERAGE_FILE}
