@@ -2,7 +2,10 @@ package attestation_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -83,6 +86,27 @@ func TestHandleAttestation(t *testing.T) {
 
 	err = att.Handle(context.Background())
 	require.NoError(t, err)
+}
+
+// TestHandleDoesNotDowngradeConfirmedAttestation is a regression test for the guard in
+// Handle: a redundant Handle on an already-confirmed (Success) attestation must return
+// early without re-resolving, so it cannot be downgraded (e.g. to Unconfirmed).
+func TestHandleDoesNotDowngradeConfirmedAttestation(t *testing.T) {
+	var resolved bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Reaching the verifier would downgrade the attestation to Unconfirmed.
+		resolved = true
+		_, _ = fmt.Fprint(w, `{"status":"INVALID"}`)
+	}))
+	defer server.Close()
+
+	att := &attestation.Attestation{Status: attestation.Success}
+	att.Credentials = &attestation.VerifierCredentials{URL: server.URL}
+
+	err := att.Handle(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, attestation.Success, att.Status, "confirmed attestation must not be downgraded")
+	require.False(t, resolved, "Handle must not re-resolve an already-confirmed attestation")
 }
 
 func setAttestations(n int, rules []int) []*attestation.Attestation {
