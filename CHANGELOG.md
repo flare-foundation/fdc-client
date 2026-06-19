@@ -1,6 +1,12 @@
 # Changelog
 
-## [v1.2.10](https://github.com/flare-foundation/fdc-client/tree/v1.2.9) - 2026-5-13
+## [Unreleased]
+
+### Fixed
+
+- Prevent redundant handling from downgrading a confirmed attestation.
+
+## [v1.2.10](https://github.com/flare-foundation/fdc-client/tree/v1.2.10) - 2026-5-13
 
 ### Fixed
 
