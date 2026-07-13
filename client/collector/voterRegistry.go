@@ -22,11 +22,16 @@ const (
 	breakingEpochCoston = 5450 // 5451 uses new address
 
 	breakingEpochCoston2 = 5338
+
+	breakingEpochFlare    = 416 // 417 uses new address
+	breakingEpochSongbird = 416 // 417 uses new address
 )
 const (
 	//  new ABI
-	newRegistryCoston  = "0x42F4526BFC6f892DB515a832a52eFc9edFADf6c0"
-	newRegistryCoston2 = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
+	newRegistryCoston   = "0x42F4526BFC6f892DB515a832a52eFc9edFADf6c0"
+	newRegistryCoston2  = "0x6a0AF07b7972177B176d3D422555cbc98DfDe914"
+	newRegistryFlare    = "0xA480457953Af3583E54DCd630b219353B8FC9Af7"
+	newRegistrySongbird = "0xd23FAE88c09e6A77dD9eFcc29D6bBC55D2e74310"
 
 	oldRegistryCoston = "0xB4B93a3A3ADa93a574E6efeb5f295bf882934cB6" // old message
 
@@ -152,6 +157,10 @@ func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registr
 		registryContractAddress = common.HexToAddress(oldRegistryCoston2)
 	} else if rewardEpochID <= breakingEpochCoston && registryContractAddress == common.HexToAddress(newRegistryCoston) {
 		registryContractAddress = common.HexToAddress(oldRegistryCoston)
+	} else if rewardEpochID <= breakingEpochFlare && registryContractAddress == common.HexToAddress(newRegistryFlare) {
+		registryContractAddress = common.HexToAddress(oldRegistryFlare)
+	} else if rewardEpochID <= breakingEpochSongbird && registryContractAddress == common.HexToAddress(newRegistrySongbird) {
+		registryContractAddress = common.HexToAddress(oldRegistrySongbird)
 	}
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
