@@ -194,10 +194,12 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 // MerkleTreeCached gets Merkle tree from cache if it is already computed or computes it.
 func (r *Round) MerkleTreeCached() (merkle.Tree, error) {
 	r.RLock()
+
 	if len(r.merkleTree) != 0 {
+		r.RUnlock()
 		return r.merkleTree, nil
 	}
-	r.RUnlock()
+	r.RUnlock() // cannot use defer as the r.MerkleTree needs unlocked mutex
 
 	return r.MerkleTree()
 }
