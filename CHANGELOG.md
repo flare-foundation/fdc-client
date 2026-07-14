@@ -1,10 +1,15 @@
 # Changelog
 
-## [Unreleased]
+## [v1.3.0](https://github.com/flare-foundation/fdc-client/tree/v1.3.0) - 2026-7-14
+
+### Changed
+
+- New VoterRegistry address for Flare and Songbird with smooth transition at reward epoch 417.
 
 ### Fixed
 
 - Prevent redundant handling from downgrading a confirmed attestation.
+- Release of read lock in `MerkleTreeCached` to prevent a deadlock when returning a cached Merkle tree.
 
 ## [v1.2.10](https://github.com/flare-foundation/fdc-client/tree/v1.2.10) - 2026-5-13
 
