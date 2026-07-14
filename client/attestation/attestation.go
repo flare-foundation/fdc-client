@@ -175,17 +175,30 @@ func (a *Attestation) Discard(ctx context.Context) bool {
 }
 
 // Handle sends the attestation request to the correct verifier server and validates the response.
-// The response is saved in the struct.
+// The response is saved in the struct. The verifier round-trip runs without the attestation lock
+// so a slow verifier cannot stall other users of this attestation.
 func (a *Attestation) Handle(ctx context.Context) error {
+	a.Lock()
+	// Re-check under the lock so a redundant handling cannot downgrade a confirmed Success.
+	if a.Status == Success {
+		a.Unlock()
+		return nil
+	}
+	// Request and Credentials are set in PrepareRequest and not mutated after, so the POST can run unlocked.
+	request := a.Request
+	credentials := a.Credentials
+	a.Unlock()
+
+	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, request, credentials)
+
 	a.Lock()
 	defer a.Unlock()
 
-	// Re-check under the lock so a redundant handling cannot downgrade a confirmed Success.
+	// A concurrent handling may have confirmed the request while the lock was released.
 	if a.Status == Success {
 		return nil
 	}
 
-	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError
 		return fmt.Errorf("unable to resolve attestation request: %w", err)

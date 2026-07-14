@@ -32,11 +32,10 @@ type VerifierCredentials struct {
 	apiKey string
 }
 
-// ResolveAttestationRequest sends the attestation request to the verifier server with verifierCredentials and stores the response.
+// ResolveAttestationRequest sends the attestation request to the verifier server with credentials and returns the response.
 // Returns true if the response is "VALID" and false otherwise.
-func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, bool, error) {
-	requestBytes := att.Request
-	encoded := hex.EncodeToString(requestBytes)
+func ResolveAttestationRequest(ctx context.Context, request Request, credentials *VerifierCredentials) ([]byte, bool, error) {
+	encoded := hex.EncodeToString(request)
 	payload := ABIEncodedRequestBody{ABIEncodedRequest: "0x" + encoded}
 
 	encodedBody, err := json.Marshal(payload)
@@ -44,14 +43,14 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 		return nil, false, fmt.Errorf("failed to encode request body: %w", err)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, att.Credentials.URL, bytes.NewBuffer(encodedBody))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, credentials.URL, bytes.NewBuffer(encodedBody))
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to create http request: %w", err)
 	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-API-KEY", att.Credentials.apiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-API-KEY", credentials.apiKey)
 
-	resp, err := verifierClient.Do(request)
+	resp, err := verifierClient.Do(httpReq)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to send http request: %w", err)
 	}
