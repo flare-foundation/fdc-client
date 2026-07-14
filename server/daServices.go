@@ -17,10 +17,11 @@ func (c *DAController) GetRequests(roundID uint32) ([]DARequest, bool) {
 		return nil, false
 	}
 
-	requests := make([]DARequest, len(round.Attestations))
+	attestations := round.AttestationsSnapshot()
+	requests := make([]DARequest, len(attestations))
 
-	for i := range round.Attestations {
-		requests[i] = AttestationToDARequest(round.Attestations[i])
+	for i := range attestations {
+		requests[i] = AttestationToDARequest(attestations[i])
 	}
 
 	return requests, true
@@ -63,15 +64,26 @@ func (c *DAController) GetAttestations(roundID uint32) ([]DAAttestation, bool) {
 		return nil, false
 	}
 
-	merkleTree, err := round.MerkleTree()
+	// Only build the Merkle tree once consensus has been computed. Building it earlier
+	// would build an empty tree and prematurely flip the round to Done, discarding
+	// still-unprocessed requests for that round.
+	round.Status.RLock()
+	ready := round.Status.Value == attestation.Consensus || round.Status.Value == attestation.Done
+	round.Status.RUnlock()
+	if !ready {
+		return nil, false
+	}
+
+	merkleTree, err := round.MerkleTreeCached()
 	if err != nil {
 		return nil, false
 	}
 
-	attestations := make([]DAAttestation, 0, len(round.Attestations))
+	snapshot := round.AttestationsSnapshot()
+	attestations := make([]DAAttestation, 0, len(snapshot))
 
-	for i := range round.Attestations {
-		att, ok, err := attestationToDAAttestation(round.Attestations[i])
+	for i := range snapshot {
+		att, ok, err := attestationToDAAttestation(snapshot[i])
 		if err != nil {
 			return nil, false
 		}

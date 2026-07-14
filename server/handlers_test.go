@@ -155,9 +155,14 @@ func TestSubmitSignaturesBadParams(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func makeDAController() DAController {
+func makeDAController(t *testing.T) DAController {
+	t.Helper()
+
 	rounds := storage.New[uint32, *round.Round](10)
-	r := round.New(1, voters.NewSet(nil, nil, nil))
+	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+	require.NoError(t, err)
+
+	r := round.New(1, vSet)
 	r.Attestations = append(r.Attestations, &attestation.Attestation{
 		Request:   []byte{0x01, 0x02},
 		Response:  []byte{0x03, 0x04},
@@ -171,7 +176,7 @@ func makeDAController() DAController {
 }
 
 func TestGetRequestsHandler(t *testing.T) {
-	ctrl := makeDAController()
+	ctrl := makeDAController(t)
 
 	tests := []struct {
 		name       string
@@ -220,7 +225,7 @@ func TestGetRequestsHandler(t *testing.T) {
 }
 
 func TestGetAttestationsHandler(t *testing.T) {
-	ctrl := makeDAController()
+	ctrl := makeDAController(t)
 
 	tests := []struct {
 		name       string

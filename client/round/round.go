@@ -80,6 +80,18 @@ func (r *Round) AddAttestation(attToAdd *attestation.Attestation) bool {
 	return true
 }
 
+// AttestationsSnapshot returns a copy of the round's attestations slice taken under
+// the read lock, so callers can iterate it without racing a concurrent AddAttestation.
+func (r *Round) AttestationsSnapshot() []*attestation.Attestation {
+	r.RLock()
+	defer r.RUnlock()
+
+	snapshot := make([]*attestation.Attestation, len(r.Attestations))
+	copy(snapshot, r.Attestations)
+
+	return snapshot
+}
+
 // sortAttestations sorts round's attestations according to their IndexLog.
 // We assume that attestations have at least one index.
 func (r *Round) sortAttestations() {
@@ -140,6 +152,9 @@ func (r *Round) ComputeConsensusBitVote() error {
 //   - bool indicating whether the consensus BitVote is successfully computed
 //   - bool indicating whether the consensus BitVote computation took place
 func (r *Round) GetConsensusBitVote() (bitvotes.BitVote, bool, bool) {
+	r.RLock()
+	defer r.RUnlock()
+
 	if r.ConsensusBitVote.BitVector == nil {
 		return bitvotes.BitVote{}, false, r.ConsensusCalculationFinished
 	}
@@ -210,12 +225,12 @@ func (r *Round) MerkleTree() (merkle.Tree, error) {
 // MerkleTreeCached gets Merkle tree from cache if it is already computed or computes it.
 func (r *Round) MerkleTreeCached() (merkle.Tree, error) {
 	r.RLock()
-
-	if len(r.merkleTree) != 0 {
-		r.RUnlock()
-		return r.merkleTree, nil
-	}
+	tree := r.merkleTree
 	r.RUnlock() // cannot use defer. r.MerkleTree() uses r.Lock()
+
+	if len(tree) != 0 {
+		return tree, nil
+	}
 
 	return r.MerkleTree()
 }

@@ -21,7 +21,7 @@ func buildQueues(queuesConfigs config.Queues) attestationQueues {
 	for k := range queuesConfigs {
 		params := queuesConfigs[k]
 		queue := priority.New[*attestation.Attestation, attestation.Weight](params, k)
-		queues[k] = &queue
+		queues[k] = queue
 	}
 
 	return queues

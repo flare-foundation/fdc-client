@@ -64,8 +64,8 @@ github.com/ethereum/go-ethereum v1.17.2 h1:ag6geu0kn8Hv5FLKTpH+Hm2DHD+iuFtuqKxEu
 github.com/ethereum/go-ethereum v1.17.2/go.mod h1:KHcRXfGOUfUmKg51IhQ0IowiqZ6PqZf08CMtk0g5K1o=
 github.com/ferranbt/fastssz v0.1.4 h1:OCDB+dYDEQDvAgtAGnTSidK1Pe2tW3nFV40XyMkTeDY=
 github.com/ferranbt/fastssz v0.1.4/go.mod h1:Ea3+oeoRGGLGm5shYAeDgu6PGUlcvQhE2fILyD9+tGg=
-github.com/flare-foundation/go-flare-common v1.2.1-0.20260423090536-1246e0ed79d0 h1:ZPVUQ3wml6rNbh6AuY8VGtWQV9PJMxTAJLn7Ejgu0Xs=
-github.com/flare-foundation/go-flare-common v1.2.1-0.20260423090536-1246e0ed79d0/go.mod h1:hF0Aia/1omzDkarlTlJM+F9iaEhG5Po3MvQ2KPEZm2U=
+github.com/flare-foundation/go-flare-common v1.2.2-0.20260602141205-814ef56107bf h1:IkerT3dYKbBuY7ujRQq/OLnG956x6XkDhFRAVPMJmQs=
+github.com/flare-foundation/go-flare-common v1.2.2-0.20260602141205-814ef56107bf/go.mod h1:DVq/pSJsf3Y5/zdGKFVWOg7ps87Riw+pVtcKTfIaufc=
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/fsnotify/fsnotify v1.5.4/go.mod h1:OVB6XrOHzAwXMpEM7uPOzcehqUV2UqJxmVXmkdnm1bU=

@@ -106,10 +106,10 @@ func TestBitVoteListener(t *testing.T) {
 	bitVotesChan := make(chan payload.Round, 2)
 
 	pyld, err := hex.DecodeString("0100050b")
-
 	require.NoError(t, err)
 
-	msg := payload.BuildMessage(200, 1, pyld)
+	msg, err := payload.BuildMessage(200, 1, pyld)
+	require.NoError(t, err)
 
 	input := hex.EncodeToString(funcSel[:]) + msg[2:]
 

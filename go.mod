@@ -3,9 +3,8 @@ module github.com/flare-foundation/fdc-client
 go 1.26.5
 
 require (
-	github.com/BurntSushi/toml v1.5.0
 	github.com/ethereum/go-ethereum v1.17.2
-	github.com/flare-foundation/go-flare-common v1.2.1-0.20260423090536-1246e0ed79d0
+	github.com/flare-foundation/go-flare-common v1.2.2-0.20260602141205-814ef56107bf
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/stretchr/testify v1.11.1
 	gorm.io/driver/sqlite v1.6.0
@@ -14,6 +13,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProjectZKM/Ziren/crates/go-runtime/zkvm_runtime v0.0.0-20251106012722-c7be33e82a11 // indirect

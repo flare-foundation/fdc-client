@@ -2,15 +2,19 @@ package round_test
 
 import (
 	"math/big"
+	"sync"
 	"testing"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/voters"
-	"github.com/stretchr/testify/require"
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
+	bitvotes "github.com/flare-foundation/fdc-client/client/attestation/bitVotes"
 	"github.com/flare-foundation/fdc-client/client/round"
 	"github.com/flare-foundation/fdc-client/client/utils"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAddAttestation(t *testing.T) {
@@ -128,7 +132,9 @@ func TestAddAttestation(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		round := round.New(1, voters.NewSet(nil, nil, nil))
+		vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+		require.NoError(t, err)
+		round := round.New(1, vSet)
 
 		for j, request := range test.requests {
 			att, err := attestation.AttestationFromDatabaseLog(request)
@@ -143,6 +149,37 @@ func TestAddAttestation(t *testing.T) {
 			require.Equalf(t, test.fees[j], att.Fee, "wrong fee for attestation %d in test %d", j, i)
 		}
 	}
+}
+
+// TestGetConsensusBitVoteConcurrent locks in the RND-2 fix under -race: GetConsensusBitVote
+// reads ConsensusBitVote/ConsensusCalculationFinished under the read lock, so it must not
+// race a writer mutating those fields under the write lock (as ComputeConsensusBitVote does).
+func TestGetConsensusBitVoteConcurrent(t *testing.T) {
+	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+	require.NoError(t, err)
+	r := round.New(1, vSet)
+
+	const iterations = 500
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			r.Lock()
+			r.ConsensusBitVote = bitvotes.BitVote{Length: 1, BitVector: big.NewInt(1)}
+			r.ConsensusCalculationFinished = true
+			r.Unlock()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			r.GetConsensusBitVote()
+		}
+	}()
+
+	wg.Wait()
 }
 
 func TestPrepend(t *testing.T) {

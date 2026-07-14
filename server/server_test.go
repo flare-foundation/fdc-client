@@ -71,7 +71,10 @@ func TestServer(t *testing.T) {
 	abi, err := config.ArgumentsFromABI(abiFile)
 	require.NoError(t, err)
 
-	round := round.New(votingRoundID, voters.NewSet(nil, nil, nil))
+	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+	require.NoError(t, err)
+
+	round := round.New(votingRoundID, vSet)
 	round.Attestations = append(round.Attestations, &attestation.Attestation{
 		Request:     request,
 		Response:    response,

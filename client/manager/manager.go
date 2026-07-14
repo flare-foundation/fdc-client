@@ -128,7 +128,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			} else {
 				logger.Debugf("Consensus bitVote %s for round %d computed.", r.ConsensusBitVote.EncodeBitVoteHex(), bvsForRound.ID)
 
-				noOfRetried, err := m.retryUnsuccessfulChosen(r)
+				noOfRetried, err := m.retryUnsuccessfulChosen(ctx, r)
 				if err != nil {
 					logger.Warnf("retrying round %d: %v", r.ID, err)
 				} else if noOfRetried > 0 {
@@ -140,7 +140,7 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			for i := range requests {
 				err := m.OnRequest(ctx, requests[i])
 				if err != nil {
-					logger.Error(err)
+					logger.Errorf("on request: %v", err)
 				}
 			}
 
@@ -184,7 +184,7 @@ func (m *Manager) OnBitVote(message payload.Message) (error, error) {
 
 	round, err := m.GetOrCreateRound(message.VotingRound)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting round %w", err)
 	}
 
 	err = round.ProcessBitVote(message)
@@ -201,18 +201,18 @@ func (m *Manager) OnBitVote(message payload.Message) (error, error) {
 func (m *Manager) OnRequest(ctx context.Context, request database.Log) error {
 	att, err := attestation.AttestationFromDatabaseLog(request)
 	if err != nil {
-		return fmt.Errorf("OnRequest: %w", err)
+		return fmt.Errorf("converting request to attestation: %w", err)
 	}
 
 	r, err := m.GetOrCreateRound(att.RoundID)
 	if err != nil {
-		return fmt.Errorf("OnRequest: %w", err)
+		return fmt.Errorf("creating round: %w", err)
 	}
 
 	added := r.AddAttestation(att)
 	if added {
-		if err := m.AddToQueue(att); err != nil {
-			return fmt.Errorf("OnRequest: %w", err)
+		if err := m.AddToQueue(ctx, att); err != nil {
+			return fmt.Errorf("adding to queue: %w", err)
 		}
 	}
 
@@ -226,7 +226,10 @@ func (m *Manager) OnSigningPolicy(data shared.VotersData) error {
 		return fmt.Errorf("validating data %w", err)
 	}
 
-	parsedPolicy := policy.NewSigningPolicy(data.Policy, data.SubmitToSigningAddress)
+	parsedPolicy, err := policy.NewSigningPolicy(data.Policy, data.SubmitToSigningAddress)
+	if err != nil {
+		return fmt.Errorf("creating policy: %w", err)
+	}
 	logger.Infof("Processing signing policy for rewardEpoch %s", data.Policy.RewardEpochId.String())
 
 	err = m.signingPolicyStorage.Add(parsedPolicy)
@@ -258,7 +261,7 @@ func VotersDataCheck(data shared.VotersData) error {
 }
 
 // retryUnsuccessfulChosen adds the requests that are without successful response but were chosen by the consensus bitVote to the priority verifier queues.
-func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
+func (m *Manager) retryUnsuccessfulChosen(ctx context.Context, round *round.Round) (int, error) {
 	count := 0 // only for logging
 
 	for i := range round.Attestations {
@@ -275,7 +278,10 @@ func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 				}
 
 				weight := attestation.Weight{Index: round.Attestations[i].Index()}
-				queue.AddFast(round.Attestations[i], weight)
+				_, err := queue.AddFast(ctx, round.Attestations[i], weight)
+				if err != nil {
+					return fmt.Errorf("adding fast to %s: %w", queueName, err)
+				}
 
 				count++
 			}
@@ -290,7 +296,7 @@ func (m *Manager) retryUnsuccessfulChosen(round *round.Round) (int, error) {
 }
 
 // AddToQueue adds the attestation to the correct verifier queue.
-func (m *Manager) AddToQueue(att *attestation.Attestation) error {
+func (m *Manager) AddToQueue(ctx context.Context, att *attestation.Attestation) error {
 	err := att.PrepareRequest(m.attestationTypeConfig)
 	if err != nil {
 		return fmt.Errorf("preparing request: %w", err)
@@ -302,7 +308,10 @@ func (m *Manager) AddToQueue(att *attestation.Attestation) error {
 	}
 
 	weight := attestation.Weight{Index: att.Index()}
-	att.QueuePointer = queue.Add(att, weight) // for future use cases
+	att.QueuePointer, err = queue.Add(ctx, att, weight) // for future use cases
+	if err != nil {
+		return fmt.Errorf("adding to %s: %w", att.QueueName, err)
+	}
 
 	return nil
 }
