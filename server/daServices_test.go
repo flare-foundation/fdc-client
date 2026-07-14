@@ -130,3 +130,55 @@ func TestGetRequestsConcurrentWithAddAttestation(t *testing.T) {
 
 	wg.Wait()
 }
+
+// TestGetRequestsConcurrentWithDuplicatePrepend is a regression test for the F7 fix:
+// AttestationToDARequest deep-copies att.Indexes, so a DA response can be read on the HTTP
+// goroutine without racing AddAttestation's in-place Prepend of a duplicate request's index.
+// Without the copy this fails under -race.
+func TestGetRequestsConcurrentWithDuplicatePrepend(t *testing.T) {
+	rounds := storage.New[uint32, *round.Round](10)
+	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+	require.NoError(t, err)
+	r := round.New(1, vSet)
+	rounds.Store(1, r)
+
+	controller := server.NewDAController(rounds)
+
+	request := []byte{0x01, 0x02, 0x03}
+	require.True(t, r.AddAttestation(&attestation.Attestation{
+		Request: request,
+		Fee:     big.NewInt(1),
+		Indexes: []attestation.IndexLog{{BlockNumber: 1_000_000, LogIndex: 0}},
+	}))
+
+	const iterations = 2000
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := range iterations {
+			// A strictly decreasing block number keeps EarlierLog true, so the dedup branch
+			// hits Prepend (in-place write of index 0) on the same attestation every iteration.
+			r.AddAttestation(&attestation.Attestation{
+				Request: request,
+				Fee:     big.NewInt(1),
+				Indexes: []attestation.IndexLog{{BlockNumber: uint64(999_999 - i), LogIndex: 0}},
+			})
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for range iterations {
+			requests, _ := controller.GetRequests(1)
+			for k := range requests {
+				for j := range requests[k].Indexes {
+					_ = requests[k].Indexes[j].BlockNumber
+					_ = requests[k].Indexes[j].LogIndex
+				}
+			}
+		}
+	}()
+
+	wg.Wait()
+}

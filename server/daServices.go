@@ -45,12 +45,18 @@ func AttestationToDARequest(att *attestation.Attestation) DARequest {
 		status = Failed
 	}
 
+	// Deep-copy Indexes so the header does not alias att.Indexes' backing array, which
+	// AddAttestation mutates in place (utils.Prepend) under att.Lock; the copy is serialized
+	// with that writer by the RLock held here, and only the private copy escapes to the encoder.
+	indexes := make([]attestation.IndexLog, len(att.Indexes))
+	copy(indexes, att.Indexes)
+
 	dARequest := DARequest{
 		Request:   hex.EncodeToString(att.Request),
 		Response:  hex.EncodeToString(att.Response),
 		Status:    status,
 		Consensus: att.Consensus,
-		Indexes:   att.Indexes,
+		Indexes:   indexes,
 	}
 
 	return dARequest
