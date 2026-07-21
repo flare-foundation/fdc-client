@@ -119,6 +119,10 @@ func (r Response) LUT() (uint64, error) {
 		lutIDEndByte += 32
 	}
 
+	if len(r) < lutIDEndByte {
+		return 0, errors.New("response is to short")
+	}
+
 	lut := r[lutStartByte:lutIDEndByte]
 	safe := big.NewInt(0)
 	safe = safe.SetBytes(lut)
