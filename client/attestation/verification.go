@@ -30,7 +30,7 @@ type Request []byte
 func (r Request) AttestationType() ([32]byte, error) {
 	res := [32]byte{}
 	if len(r) < 96 {
-		return res, errors.New("request is to short")
+		return res, errors.New("request is too short")
 	}
 
 	copy(res[:], r[0:32])
@@ -42,7 +42,7 @@ func (r Request) AttestationType() ([32]byte, error) {
 func (r Request) Source() ([32]byte, error) {
 	res := [32]byte{}
 	if len(r) < 96 {
-		return res, errors.New("request is to short")
+		return res, errors.New("request is too short")
 	}
 
 	copy(res[:], r[32:64])
@@ -70,7 +70,7 @@ func (r Request) TypeAndSourceString() string {
 // MIC returns Message Integrity code of the request (the third 32 bytes).
 func (r Request) MIC() (common.Hash, error) {
 	if len(r) < 96 {
-		return common.Hash{}, errors.New("request is to short")
+		return common.Hash{}, errors.New("request is too short")
 	}
 
 	mic := common.Hash{}
@@ -120,7 +120,7 @@ func (r Response) LUT() (uint64, error) {
 	}
 
 	if len(r) < lutIDEndByte {
-		return 0, errors.New("response is to short")
+		return 0, errors.New("response is too short")
 	}
 
 	lut := r[lutStartByte:lutIDEndByte]
@@ -169,7 +169,7 @@ func (r Response) AddRound(roundID uint32) error {
 	}
 
 	if len(r) < commonFieldsLength {
-		return errors.New("response is to short")
+		return errors.New("response is too short")
 	}
 
 	// encode roundID (uint32) to []byte of length 32 prepended with 0
@@ -194,7 +194,7 @@ func (r Response) AddRound(roundID uint32) error {
 // Hash computes hash of the response.
 func (r Response) Hash(roundID uint32) (common.Hash, error) {
 	if len(r) < 128 {
-		return common.Hash{}, errors.New("response is to short")
+		return common.Hash{}, errors.New("response is too short")
 	}
 
 	err := r.AddRound(roundID)
@@ -211,7 +211,7 @@ func (r Response) Hash(roundID uint32) (common.Hash, error) {
 // See https://docs.soliditylang.org/en/latest/abi-spec.html for detailed specification.
 func IsStaticType(bytes []byte) (bool, error) {
 	if len(bytes) < 96 {
-		return false, errors.New("bytes are to short")
+		return false, errors.New("bytes are too short")
 	}
 
 	first32 := [32]byte(bytes[:32])
