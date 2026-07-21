@@ -187,9 +187,9 @@ func TestCalcValue(t *testing.T) {
 	for i, test := range tests {
 		value := bitvotes.CalcValue(test.feeSum, test.weight, totalWeight)
 
-		require.Equal(t, test.cappedValue, value.CappedValue, fmt.Sprintf("error in test %d", i))
+		require.Equalf(t, test.cappedValue, value.CappedValue, "error in test %d", i)
 
-		require.Equal(t, test.uncappedValue, value.UncappedValue, fmt.Sprintf("error in test %d", i))
+		require.Equalf(t, test.uncappedValue, value.UncappedValue, "error in test %d", i)
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
 	"github.com/flare-foundation/go-flare-common/pkg/voters"
 
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -146,7 +145,7 @@ func TestManagerMethods(t *testing.T) {
 		bitVoteMessageWrongLength,
 	} {
 		bverr, err := mngr.OnBitVote(badBitVote)
-		require.Error(t, bverr, fmt.Sprintf("error in bad bitVote %d", i))
+		require.Errorf(t, bverr, "error in bad bitVote %d", i)
 		require.NoError(t, err)
 	}
 

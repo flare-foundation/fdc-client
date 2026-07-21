@@ -69,19 +69,19 @@ func TestResponse(t *testing.T) {
 		// isStaticType
 		isStaticType, err := attestation.IsStaticType(resp)
 		require.NoError(t, err)
-		require.Equal(t, test.isStaticType, isStaticType, fmt.Sprintf("error isStaticError in test %d", i))
+		require.Equalf(t, test.isStaticType, isStaticType, "error isStaticError in test %d", i)
 
 		// MIC
 		mic, err := resp.ComputeMIC(&abi)
 		require.NoError(t, err)
 		expectedMic, err := hex.DecodeString(test.mic)
 		require.NoError(t, err)
-		require.Equal(t, expectedMic, mic[:], fmt.Sprintf("error mic in test %d", i))
+		require.Equalf(t, expectedMic, mic[:], "error mic in test %d", i)
 
 		// LUT
 		lut, err := resp.LUT()
 		require.NoError(t, err)
-		require.Equal(t, test.lut, lut, fmt.Sprintf("error lut in test %d", i))
+		require.Equalf(t, test.lut, lut, "error lut in test %d", i)
 
 		// add round
 		err = resp.AddRound(1)
@@ -97,12 +97,12 @@ func TestResponse(t *testing.T) {
 			roundStart += 32
 			roundEnd += 32
 		}
-		require.Equal(t, big.NewInt(int64(test.round)), new(big.Int).SetBytes(respBytes[roundStart:roundEnd]), fmt.Sprintf("error add round in test %d", i))
+		require.Equalf(t, big.NewInt(int64(test.round)), new(big.Int).SetBytes(respBytes[roundStart:roundEnd]), "error add round in test %d", i)
 
 		// hash
 		hash, err := resp.Hash(test.round)
 		require.NoError(t, err)
-		require.Equal(t, common.HexToHash(test.hash), hash, fmt.Sprintf("error hash in test %d", i))
+		require.Equalf(t, common.HexToHash(test.hash), hash, "error hash in test %d", i)
 	}
 }
 
@@ -206,14 +206,14 @@ func TestRequest(t *testing.T) {
 		copy(expectedAttType[:], []byte(test.attType))
 		attType, err := req.AttestationType()
 		require.NoError(t, err)
-		require.Equal(t, expectedAttType, attType, fmt.Sprintf("error attType in test %d", i))
+		require.Equalf(t, expectedAttType, attType, "error attType in test %d", i)
 
 		// source
 		expectedSource := [32]byte{}
 		copy(expectedSource[:], []byte(test.source))
 		source, err := req.Source()
 		require.NoError(t, err)
-		require.Equal(t, expectedSource, source, fmt.Sprintf("error source in test %d", i))
+		require.Equalf(t, expectedSource, source, "error source in test %d", i)
 
 		// att type and source
 		expectedAttTypeAndSource := [64]byte{}
@@ -221,12 +221,12 @@ func TestRequest(t *testing.T) {
 		copy(expectedAttTypeAndSource[32:], []byte(test.source))
 
 		// type and source string
-		require.Equal(t, fmt.Sprintf("%s/%s", test.attType, test.source), req.TypeAndSourceString(), fmt.Sprintf("error type and source string in test %d", i))
+		require.Equalf(t, fmt.Sprintf("%s/%s", test.attType, test.source), req.TypeAndSourceString(), "error type and source string in test %d", i)
 
 		// mic
 		expectedMic := common.HexToHash(test.mic)
 		mic, err := req.MIC()
 		require.NoError(t, err)
-		require.Equal(t, expectedMic, mic, fmt.Sprintf("error mic in test %d", i))
+		require.Equalf(t, expectedMic, mic, "error mic in test %d", i)
 	}
 }

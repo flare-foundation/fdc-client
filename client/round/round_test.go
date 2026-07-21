@@ -1,7 +1,6 @@
 package round_test
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -135,15 +134,15 @@ func TestAddAttestation(t *testing.T) {
 
 		for j, request := range test.requests {
 			att, err := attestation.AttestationFromDatabaseLog(request)
-			require.NoError(t, err, fmt.Sprintf("error parsing request %d in test %d ", j, i))
+			require.NoErrorf(t, err, "error parsing request %d in test %d ", j, i)
 
 			added := round.AddAttestation(att)
-			require.Equal(t, test.added[j], added, fmt.Sprintf("wrongly added request %d in test %d ", j, i))
+			require.Equalf(t, test.added[j], added, "wrongly added request %d in test %d ", j, i)
 		}
-		require.Equal(t, test.nuOfAttestations, len(round.Attestations), fmt.Sprintf("wrong number of attestations in test %d", i))
+		require.Equalf(t, test.nuOfAttestations, len(round.Attestations), "wrong number of attestations in test %d", i)
 
 		for j, att := range round.Attestations {
-			require.Equal(t, test.fees[j], att.Fee, fmt.Sprintf("wrong fee for attestation %d in test %d", j, i))
+			require.Equalf(t, test.fees[j], att.Fee, "wrong fee for attestation %d in test %d", j, i)
 		}
 	}
 }
@@ -168,6 +167,6 @@ func TestPrepend(t *testing.T) {
 		for _, j := range test.added {
 			array = utils.Prepend(array, j)
 		}
-		require.Equal(t, test.expected, array, fmt.Sprintf("error in test %d", i))
+		require.Equalf(t, test.expected, array, "error in test %d", i)
 	}
 }
