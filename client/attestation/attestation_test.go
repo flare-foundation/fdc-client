@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/config"
@@ -79,10 +78,8 @@ func TestHandleAttestation(t *testing.T) {
 
 	err = att.PrepareRequest(attestationTypesConfigs)
 	require.NoError(t, err)
-	att.Credentials.URL = "http://localhost:5555"
 
-	go mocks.MockVerifierForTests(t, 5555, testResponse, testLog)
-	time.Sleep(1 * time.Second)
+	att.Credentials.URL = mocks.MockVerifierForTests(t, testResponse, testLog)
 
 	err = att.Handle(context.Background())
 	require.NoError(t, err)

@@ -50,6 +50,7 @@ func makeController(t *testing.T) server.DAController {
 	bitVote := bitvotes.BitVote{Length: 1, BitVector: big.NewInt(1)}
 
 	round.ConsensusBitVote = bitVote
+	round.ConsensusCalculationFinished = true
 
 	return controller
 }
