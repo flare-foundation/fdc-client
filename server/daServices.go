@@ -15,16 +15,18 @@ func (c *DAController) GetRequests(roundId uint32) ([]DARequest, bool) {
 		return nil, false
 	}
 
-	requests := make([]DARequest, len(round.Attestations))
+	attestations, indexes := round.AttestationsWithIndexes()
+	requests := make([]DARequest, len(attestations))
 
-	for i := range round.Attestations {
-		requests[i] = AttestationToDARequest(round.Attestations[i])
+	for i := range attestations {
+		requests[i] = AttestationToDARequest(attestations[i], indexes[i])
 	}
 
 	return requests, true
 }
 
-func AttestationToDARequest(att *attestation.Attestation) DARequest {
+// indexes must come from Round.AttestationsWithIndexes — att.Indexes is guarded by the round lock.
+func AttestationToDARequest(att *attestation.Attestation, indexes []attestation.IndexLog) DARequest {
 	att.RLock()
 	defer att.RUnlock()
 
@@ -46,7 +48,7 @@ func AttestationToDARequest(att *attestation.Attestation) DARequest {
 		Response:  hex.EncodeToString(att.Response),
 		Status:    status,
 		Consensus: att.Consensus,
-		Indexes:   att.Indexes,
+		Indexes:   indexes,
 	}
 
 	return dARequest
@@ -63,10 +65,11 @@ func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
 		return nil, false
 	}
 
-	attestations := make([]DAAttestation, 0)
+	snapshot := round.AttestationsSnapshot()
+	attestations := make([]DAAttestation, 0, len(snapshot))
 
-	for i := range round.Attestations {
-		att, ok, err := attestationToDAAttestation(round.Attestations[i])
+	for i := range snapshot {
+		att, ok, err := attestationToDAAttestation(snapshot[i])
 		if err != nil {
 			return nil, false
 		}

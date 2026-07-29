@@ -43,18 +43,22 @@ func discard(ctx context.Context, at *attestation.Attestation) bool {
 	return at.Discard(ctx)
 }
 
-// runQueues runs all attestation queues at once.
+// runQueues initiates all attestation queues, then spawns a dequeue worker per queue.
+//
+// Initiation must stay on the caller's goroutine: it writes the channels that every later
+// Add/AddFast reads, and a nil p.in blocks Add forever.
 func runQueues(ctx context.Context, queues attestationQueues) {
 	for k := range queues {
-		go func(k string) {
-			run(ctx, queues[k])
-		}(k)
+		queues[k].InitiateAndRun(ctx)
+	}
+
+	for k := range queues {
+		go run(ctx, queues[k])
 	}
 }
 
 // run tracks and handles all dequeued attestations from a queue.
 func run(ctx context.Context, q *attestationQueue) {
-	q.InitiateAndRun(ctx)
 	for {
 		q.Dequeue(ctx, handler, discard)
 
