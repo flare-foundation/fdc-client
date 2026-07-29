@@ -60,7 +60,13 @@ func (c *DAController) GetAttestations(roundId uint32) ([]DAAttestation, bool) {
 		return nil, false
 	}
 
-	merkleTree, err := round.MerkleTree()
+	// gate as submitSignaturesService does: MerkleTree is a write path that flips the round to
+	// Done, so an externally timed pre-consensus query must not reach it
+	if _, ok, computed := round.GetConsensusBitVote(); !computed || !ok {
+		return nil, false
+	}
+
+	merkleTree, err := round.MerkleTreeCached()
 	if err != nil {
 		return nil, false
 	}

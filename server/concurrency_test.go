@@ -121,6 +121,28 @@ func TestConcurrentRoundAccess(t *testing.T) {
 		require.Equal(t, iterations, len(r.AttestationsSnapshot()))
 	})
 
+	// A DA query landing before consensus must report not-found instead of computing the merkle
+	// tree: that write path flips the round to Done and dequeue workers then discard its
+	// still-pending attestations.
+	t.Run("preConsensus", func(t *testing.T) {
+		r, controller := newTestRound(t)
+		newAttestation := newFactory(t)
+
+		att := newAttestation(variant(base, 0), 1)
+		att.Status = attestation.Waiting
+		att.Consensus = false
+		require.True(t, r.AddAttestation(att))
+
+		_, ok := controller.GetAttestations(concurrencyRoundID)
+		require.False(t, ok)
+
+		r.Status.Lock()
+		status := r.Status.Value
+		r.Status.Unlock()
+
+		require.Equal(t, attestation.PreConsensus, status)
+	})
+
 	// AddAttestation rewriting a merged attestation's Indexes, and sortAttestations reordering the
 	// slice in place, vs everything the DA and FSP handlers read.
 	t.Run("merge", func(t *testing.T) {
