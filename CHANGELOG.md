@@ -17,17 +17,28 @@ Set `cors_origin` (or `REST_CORS_ORIGIN`) to permit a specific origin.
 - **Behavioral (API):** error responses are now plain-text bodies (`Content-Type: text/plain`) produced by the standard library, instead of the previous `application/json` `{"error": ...}` objects.
 HTTP status codes are unchanged; any client that parsed the error body as JSON must adapt.
 - **Behavioral (config):** `lutLimit` is now required and validated for each attestation source; a missing or out-of-range value is a hard configuration error at startup.
+- **Behavioral (config):** the shipped queue defaults are now bounded — `max_dequeues_per_second` 0 → 200 and `max_workers` 0 → 20 for every queue in `configs/userConfig.toml`.
+Deployments relying on the previous unbounded behaviour must set these explicitly.
 - The client now shuts down immediately on an interrupt signal instead of waiting two minutes.
-- Bumped go-ethereum to 1.17.2, go-flare-common to v1.2.2, and Go to 1.26.5.
+- Bumped go-ethereum to 1.17.5, go-flare-common to 09a10067, and Go to 1.26.5, clearing the standard library vulnerabilities reported by govulncheck.
+- Attestation requests beyond the 65535th in a round are discarded, since a bit vote cannot address them.
 
 ### Removed
 
 - The `/api-doc` (Swagger) endpoint and its `swagger_path` config option.
+- Code needed for VoterRegistry address and ABI changes. Reward epochs before the transition (417 on Flare and Songbird, 5451 on Coston, 5339 on Coston2) are no longer supported.
 
 ### Fixed
 
 - `GET /da/getAttestations` now returns `NOT_AVAILABLE` until a round reaches consensus, instead of returning `OK` with an empty list beforehand.
 This also fixes early queries prematurely marking a round as done and discarding still-unprocessed requests.
+- Data races between the manager writing a round and the servers reading it: merging an attestation
+now holds that attestation's lock, DA request headers deep-copy the index list instead of aliasing
+the slice the manager prepends to in place, and the retry walk iterates a snapshot.
+- Priority-queue initialisation race: every queue is initiated before any dequeue worker starts.
+- Consensus is computed on a dedicated worker goroutine rather than on the bit-vote ingest path.
+- `Response.LUT()` no longer panics on a response shorter than its LUT field; it returns an error.
+- Corrected "request/response is to short" to "too short" in attestation verification errors.
 
 ### Security
 
@@ -35,14 +46,9 @@ This also fixes early queries prematurely marking a round as done and discarding
 - Added a panic-recovery middleware that returns a generic 500 instead of dropping the connection on a handler panic.
 - Added security response headers: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Cache-Control: no-store`.
 - Hardened the HTTP server with a 60s idle timeout and a 1 MB maximum header size.
-
-### Changed
-
-- Go 1.25.13, clearing the standard library vulnerabilities reported by govulncheck.
-
-### Removed
-
-- Code needed for VoterRegistry address and ABI changes. Reward epochs before the transition (417 on Flare and Songbird, 5451 on Coston, 5339 on Coston2) are no longer supported.
+- The container image now runs as the unprivileged user `10001:10001`.
+A `.dockerignore` whitelist keeps the build context to the files the image needs.
+Container health checking is left to the orchestrator; the image ships no `HEALTHCHECK`.
 
 ## [v1.3.0](https://github.com/flare-foundation/fdc-client/tree/v1.3.0) - 2026-7-14
 
