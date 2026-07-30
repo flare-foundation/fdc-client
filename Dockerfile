@@ -1,5 +1,5 @@
 # build executable
-FROM golang:1.25.1-trixie@sha256:61226c61f37cb86253c4ac486ef22c47f14bfddb8f60bb4805bfc165001be758 AS builder
+FROM golang:1.25.12-trixie@sha256:8756e3e43d88bbc1e29fa22577cd1e9ff2e67ee29fe0a8023c18073ae5c172d0 AS builder
 
 WORKDIR /build
 
@@ -13,7 +13,7 @@ COPY . .
 # Build the applications
 RUN go build -o /app/fdc-client main/main.go
 
-FROM debian:trixie@sha256:fd8f5a1df07b5195613e4b9a0b6a947d3772a151b81975db27d47f093f60c6e6 AS execution
+FROM debian:trixie@sha256:34cd9e9fd437c0a095ec39cb2e73422c9f30821b0d0848ed74fd0d43bae4d958 AS execution
 
 # unprivileged runtime account
 # home is never created — /nonexistent keeps $HOME from naming a real path
