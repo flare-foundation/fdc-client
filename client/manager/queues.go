@@ -43,11 +43,10 @@ func discard(ctx context.Context, at *attestation.Attestation) bool {
 	return at.Discard(ctx)
 }
 
-// runQueues initializes all attestation queues synchronously, then spawns a
-// dequeue worker per queue and returns. Initialization must happen on the
-// caller's goroutine so subsequent Add/AddFast from the caller has a
-// happens-before edge with PriorityQueue.InitiateAndRun's writes to its
-// internal channels.
+// runQueues initiates every attestation queue synchronously, then spawns a dequeue
+// worker per queue. The queues' channels already exist from New, so the synchronous
+// phase orders startup — every queue accepts work before any worker runs — rather
+// than preventing a data race.
 func runQueues(ctx context.Context, queues attestationQueues) {
 	for k := range queues {
 		queues[k].InitiateAndRun(ctx)
