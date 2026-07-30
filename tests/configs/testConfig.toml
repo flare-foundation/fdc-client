@@ -31,9 +31,9 @@ version = "0.0.0"
 [types.EVMTransaction]
 abi_path = "../../tests/configs/abis/EVMTransaction.json"
 
-# ETH 
+# ETH
 [types.EVMTransaction.Sources.ETH]
-url = "http://localhost:5556"
+# no url: tests inject the mock verifier's ephemeral URL via setVerifierURL
 api_key = "12345"
 lut_limit = "18446744073709551615"
 queue = "evmETH"

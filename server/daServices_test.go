@@ -90,13 +90,33 @@ func TestGetAttestationsPreConsensus(t *testing.T) {
 	rounds := storage.New[uint32, *round.Round](10)
 	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
 	require.NoError(t, err)
-	rounds.Store(1, round.New(1, vSet)) // status defaults to PreConsensus
+
+	r := round.New(1, vSet) // status defaults to PreConsensus
+	rounds.Store(1, r)
+
+	request, err := hex.DecodeString(requestEVM)
+	require.NoError(t, err)
+
+	// a still-pending request is what a premature flip to Done would discard
+	require.True(t, r.AddAttestation(&attestation.Attestation{
+		Request: request,
+		RoundID: 1,
+		Status:  attestation.Waiting,
+		Fee:     big.NewInt(1),
+		Indexes: []attestation.IndexLog{{BlockNumber: 1}},
+	}))
 
 	controller := server.NewDAController(rounds)
 
 	attestations, ok := controller.GetAttestations(1)
 	require.False(t, ok)
 	require.Nil(t, attestations)
+
+	r.Status.Lock()
+	status := r.Status.Value
+	r.Status.Unlock()
+
+	require.Equal(t, attestation.PreConsensus, status)
 }
 
 // TestGetRequestsConcurrentWithAddAttestation exercises the audit H1 fix under -race:
