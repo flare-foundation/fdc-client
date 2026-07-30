@@ -15,6 +15,12 @@ RUN go build -o /app/fdc-client main/main.go
 
 FROM debian:trixie@sha256:fd8f5a1df07b5195613e4b9a0b6a947d3772a151b81975db27d47f093f60c6e6 AS execution
 
+# unprivileged runtime account
+# home is never created — /nonexistent keeps $HOME from naming a real path
+RUN groupadd --system --gid 10001 app \
+    && useradd --system --uid 10001 --gid 10001 --no-create-home \
+       --home-dir /nonexistent --shell /usr/sbin/nologin app
+
 WORKDIR /app
 
 # binary
@@ -25,5 +31,12 @@ COPY --from=builder /build/configs/systemConfigs /app/configs/systemConfigs
 # ssl certificates
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
+# must match the port of rest_server.addr in the mounted userConfig.toml
+EXPOSE 8080
+
+# numeric — k8s runAsNonRoot cannot verify a named user
+USER 10001:10001
+
+#checkov:skip=CKV_DOCKER_2: Health check is handled by container orchestrator
 
 CMD ["./fdc-client" ]
