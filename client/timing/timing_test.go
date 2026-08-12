@@ -1,7 +1,6 @@
 package timing_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/flare-foundation/fdc-client/client/timing"
@@ -30,8 +29,8 @@ func TestRoundIDForTimestamp(t *testing.T) {
 
 	for i, test := range tests {
 		roundID, err := timing.RoundIDForTS(test.timestamp)
-		require.NoError(t, err, fmt.Sprintf("unexpected error in test %d: %s", i, err))
-		require.Equal(t, test.roundID, roundID, fmt.Sprintf("wrong round in test %d", i))
+		require.NoErrorf(t, err, "unexpected error in test %d: %s", i, err)
+		require.Equalf(t, test.roundID, roundID, "wrong round in test %d", i)
 	}
 }
 
@@ -58,13 +57,13 @@ func TestTimesForRounds(t *testing.T) {
 
 	for i, test := range tests {
 		timestampStart := timing.RoundStartTS(test.roundID)
-		require.Equal(t, test.timestampStart, timestampStart, fmt.Sprintf("wrong timestampStart in test %d", i))
+		require.Equalf(t, test.timestampStart, timestampStart, "wrong timestampStart in test %d", i)
 
 		timestampChoose := timing.ChooseStartTS(test.roundID)
-		require.Equal(t, test.timestampChoose, timestampChoose, fmt.Sprintf("wrong timestampChoose in test %d", i))
+		require.Equalf(t, test.timestampChoose, timestampChoose, "wrong timestampChoose in test %d", i)
 
 		timestampChooseEnd := timing.ChooseEndTS(test.roundID)
-		require.Equal(t, test.timestampChooseEnd, timestampChooseEnd, fmt.Sprintf("wrong timestampChooseEnd in test %d", i))
+		require.Equalf(t, test.timestampChooseEnd, timestampChooseEnd, "wrong timestampChooseEnd in test %d", i)
 	}
 }
 
@@ -101,12 +100,12 @@ func TestTimesForTimestamps(t *testing.T) {
 
 	for i, test := range tests {
 		roundIDChoose, chooseEnd := timing.NextChooseEnd(test.timestamp)
-		require.Equal(t, test.roundIDChoose, roundIDChoose, fmt.Sprintf("wrong roundIDChoose in test %d", i))
-		require.Equal(t, test.chooseEnd, chooseEnd, fmt.Sprintf("wrong chooseEnd in test %d", i))
+		require.Equalf(t, test.roundIDChoose, roundIDChoose, "wrong roundIDChoose in test %d", i)
+		require.Equalf(t, test.chooseEnd, chooseEnd, "wrong chooseEnd in test %d", i)
 
 		roundIDCollect, collectStart, err := timing.LastCollectPhaseStart(test.timestamp)
 		require.NoError(t, err)
-		require.Equal(t, test.roundIDCollect, roundIDCollect, fmt.Sprintf("wrong roundIDCollect in test %d", i))
-		require.Equal(t, test.collectStart, collectStart, fmt.Sprintf("wrong roundIDCollect in test %d", i))
+		require.Equalf(t, test.roundIDCollect, roundIDCollect, "wrong roundIDCollect in test %d", i)
+		require.Equalf(t, test.collectStart, collectStart, "wrong roundIDCollect in test %d", i)
 	}
 }

@@ -1,6 +1,7 @@
 package attestation_test
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"math/big"
@@ -68,19 +69,19 @@ func TestResponse(t *testing.T) {
 		// isStaticType
 		isStaticType, err := attestation.IsStaticType(resp)
 		require.NoError(t, err)
-		require.Equal(t, test.isStaticType, isStaticType, fmt.Sprintf("error isStaticError in test %d", i))
+		require.Equalf(t, test.isStaticType, isStaticType, "error isStaticError in test %d", i)
 
 		// MIC
 		mic, err := resp.ComputeMIC(&abi)
 		require.NoError(t, err)
 		expectedMic, err := hex.DecodeString(test.mic)
 		require.NoError(t, err)
-		require.Equal(t, expectedMic, mic[:], fmt.Sprintf("error mic in test %d", i))
+		require.Equalf(t, expectedMic, mic[:], "error mic in test %d", i)
 
 		// LUT
 		lut, err := resp.LUT()
 		require.NoError(t, err)
-		require.Equal(t, test.lut, lut, fmt.Sprintf("error lut in test %d", i))
+		require.Equalf(t, test.lut, lut, "error lut in test %d", i)
 
 		// add round
 		err = resp.AddRound(1)
@@ -96,12 +97,82 @@ func TestResponse(t *testing.T) {
 			roundStart += 32
 			roundEnd += 32
 		}
-		require.Equal(t, big.NewInt(int64(test.round)), new(big.Int).SetBytes(respBytes[roundStart:roundEnd]), fmt.Sprintf("error add round in test %d", i))
+		require.Equalf(t, big.NewInt(int64(test.round)), new(big.Int).SetBytes(respBytes[roundStart:roundEnd]), "error add round in test %d", i)
 
 		// hash
 		hash, err := resp.Hash(test.round)
 		require.NoError(t, err)
-		require.Equal(t, common.HexToHash(test.hash), hash, fmt.Sprintf("error hash in test %d", i))
+		require.Equalf(t, common.HexToHash(test.hash), hash, "error hash in test %d", i)
+	}
+}
+
+// staticResponse builds a response of length n whose first 32 bytes are zero,
+// so IsStaticType reports it as a static encoding (lut lives in slot 4, [96:128]).
+func staticResponse(n int) attestation.Response {
+	return make([]byte, n)
+}
+
+// dynamicResponse builds a response of length n prefixed with bytes32(32),
+// so IsStaticType reports it as a dynamic encoding (lut lives in slot 5, [128:160]).
+func dynamicResponse(n int) attestation.Response {
+	r := make([]byte, n)
+	if n > 31 {
+		r[31] = 32
+	}
+	return r
+}
+
+func TestLUT(t *testing.T) {
+	// static, valid: lut = 42 encoded in slot 4 ([96:128], big-endian in last 8 bytes).
+	staticValid := staticResponse(128)
+	binary.BigEndian.PutUint64(staticValid[120:128], 42)
+
+	// dynamic, valid: lut = 1718113224 encoded in slot 5 ([128:160]).
+	dynamicValid := dynamicResponse(160)
+	binary.BigEndian.PutUint64(dynamicValid[152:160], 1718113224)
+
+	// static, valid but lut does not fit in uint64 (top byte of the slot set).
+	staticTooBig := staticResponse(128)
+	staticTooBig[96] = 0xff
+
+	tests := []struct {
+		name     string
+		response attestation.Response
+		lut      uint64
+		wantErr  bool
+	}{
+		{name: "static valid", response: staticValid, lut: 42},
+		{name: "dynamic valid", response: dynamicValid, lut: 1718113224},
+		{name: "static min length", response: func() attestation.Response {
+			r := staticResponse(128)
+			binary.BigEndian.PutUint64(r[120:128], 7)
+			return r
+		}(), lut: 7},
+		{name: "dynamic min length", response: func() attestation.Response {
+			r := dynamicResponse(160)
+			binary.BigEndian.PutUint64(r[152:160], 9)
+			return r
+		}(), lut: 9},
+		// regression: too short must return an error instead of panicking.
+		{name: "static one byte short", response: staticResponse(127), wantErr: true},
+		{name: "static at 96", response: staticResponse(96), wantErr: true},
+		{name: "dynamic one byte short", response: dynamicResponse(159), wantErr: true},
+		{name: "dynamic long enough for static only", response: dynamicResponse(128), wantErr: true},
+		{name: "shorter than common fields", response: staticResponse(50), wantErr: true},
+		{name: "empty", response: attestation.Response{}, wantErr: true},
+		{name: "lut too big", response: staticTooBig, wantErr: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			lut, err := test.response.LUT()
+			if test.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, test.lut, lut)
+		})
 	}
 }
 
@@ -135,14 +206,14 @@ func TestRequest(t *testing.T) {
 		copy(expectedAttType[:], []byte(test.attType))
 		attType, err := req.AttestationType()
 		require.NoError(t, err)
-		require.Equal(t, expectedAttType, attType, fmt.Sprintf("error attType in test %d", i))
+		require.Equalf(t, expectedAttType, attType, "error attType in test %d", i)
 
 		// source
 		expectedSource := [32]byte{}
 		copy(expectedSource[:], []byte(test.source))
 		source, err := req.Source()
 		require.NoError(t, err)
-		require.Equal(t, expectedSource, source, fmt.Sprintf("error source in test %d", i))
+		require.Equalf(t, expectedSource, source, "error source in test %d", i)
 
 		// att type and source
 		expectedAttTypeAndSource := [64]byte{}
@@ -150,12 +221,12 @@ func TestRequest(t *testing.T) {
 		copy(expectedAttTypeAndSource[32:], []byte(test.source))
 
 		// type and source string
-		require.Equal(t, fmt.Sprintf("%s/%s", test.attType, test.source), req.TypeAndSourceString(), fmt.Sprintf("error type and source string in test %d", i))
+		require.Equalf(t, fmt.Sprintf("%s/%s", test.attType, test.source), req.TypeAndSourceString(), "error type and source string in test %d", i)
 
 		// mic
 		expectedMic := common.HexToHash(test.mic)
 		mic, err := req.MIC()
 		require.NoError(t, err)
-		require.Equal(t, expectedMic, mic, fmt.Sprintf("error mic in test %d", i))
+		require.Equalf(t, expectedMic, mic, "error mic in test %d", i)
 	}
 }

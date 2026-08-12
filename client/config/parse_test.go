@@ -1,7 +1,6 @@
 package config_test
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -69,12 +68,12 @@ func TestStringToByte32(t *testing.T) {
 	require.NoError(t, err)
 
 	result := [32]byte{49, 50, 33, 65, 98, 40, 32, 41}
-	require.Equal(t, result, bytes, fmt.Sprintf("bytes %v do not match expectation, %v", bytes, result))
+	require.Equalf(t, result, bytes, "bytes %v do not match expectation, %v", bytes, result)
 
 	c := strings.Repeat("A", 33)
 	bytes, err = config.StringToByte32(c)
 	require.Error(t, err)
-	require.Equal(t, [32]byte{}, bytes, fmt.Sprintf("bytes %v do not match expectation, %v", bytes, result))
+	require.Equalf(t, [32]byte{}, bytes, "bytes %v do not match expectation, %v", bytes, result)
 }
 
 func TestWhiteSpaceStrip(t *testing.T) {
@@ -102,6 +101,6 @@ func TestWhiteSpaceStrip(t *testing.T) {
 
 	for i, test := range tests {
 		output := config.WhiteSpaceStrip(test.input)
-		require.Equal(t, test.output, output, fmt.Sprintf("wrong output test %d", i))
+		require.Equalf(t, test.output, output, "wrong output test %d", i)
 	}
 }
