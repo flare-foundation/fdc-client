@@ -1,0 +1,13 @@
+# whitelist: exclude everything, re-include only what the image build needs
+*
+!go.mod
+!go.sum
+!main
+!client
+!server
+!configs/abis
+!configs/systemConfigs
+# tests don't affect the binary; keep them out of the layer cache
+**/*_test.go
+**/.snapshots
+**/README.md
