@@ -23,11 +23,14 @@ import (
 //   - DB_PORT
 //   - DB_USERNAME
 //   - DB_PASSWORD
-//   - DB_NAME
+//   - DB_DATABASE
+//   - DB_MAX_OPEN_CONNS, DB_MAX_IDLE_CONNS, DB_CONN_MAX_LIFETIME, DB_CONN_MAX_IDLE_TIME
 //   - REST_ADDR
 //   - REST_API_KEY_NAME
 //   - REST_API_KEYS (comma-separated)
 //   - REST_CORS_ORIGIN
+//
+// Every other RestServer field is tagged ignored:"true"; see the RestServer definition.
 func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 	userConfigRaw, err := ReadUserRaw(userFilePath)
 	if err != nil {

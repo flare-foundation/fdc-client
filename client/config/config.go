@@ -44,14 +44,17 @@ type RestServer struct {
 	APIKeyName string   `toml:"api_key_name" envconfig:"REST_API_KEY_NAME"`
 	APIKeys    []string `toml:"api_keys" envconfig:"REST_API_KEYS"`
 
-	Title      string `toml:"title"`
-	FSPTitle   string `toml:"fsp_sub_router_title"`
-	FSPSubpath string `toml:"fsp_sub_router_path"`
+	// ignored:"true" — envconfig runs with an empty prefix, so an untagged field would bind
+	// from its bare uppercased name (TITLE, VERSION, FSPSUBPATH, …). The subpaths are
+	// route-bearing: a value without a leading "/" panics ServeMux at startup.
+	Title      string `toml:"title" ignored:"true"`
+	FSPTitle   string `toml:"fsp_sub_router_title" ignored:"true"`
+	FSPSubpath string `toml:"fsp_sub_router_path" ignored:"true"`
 
-	DATitle    string `toml:"da_sub_router_title"`
-	DAPSubpath string `toml:"da_sub_router_path"`
+	DATitle    string `toml:"da_sub_router_title" ignored:"true"`
+	DAPSubpath string `toml:"da_sub_router_path" ignored:"true"`
 
-	Version    string `toml:"version"`
+	Version    string `toml:"version" ignored:"true"`
 	CORSOrigin string `toml:"cors_origin" envconfig:"REST_CORS_ORIGIN"`
 }
 
