@@ -191,10 +191,16 @@ func TestManager(t *testing.T) {
 
 	// get signing policy
 	sharedDataPipes.Voters <- []shared.VotersData{votersData}
-	time.Sleep(1 * time.Second)
-	policy, _ := mngr.signingPolicyStorage.ForVotingRound(664111)
 
-	time.Sleep(1 * time.Second)
+	// wait for the manager to drain the policy — a bare sleep leaves signingPolicy nil on a
+	// slow drain, and the VoterDataMap range below then panics and kills the test binary
+	require.Eventually(t, func() bool {
+		_, ok := mngr.signingPolicyStorage.ForVotingRound(664111)
+		return ok
+	}, 5*time.Second, 50*time.Millisecond)
+
+	signingPolicy, ok := mngr.signingPolicyStorage.ForVotingRound(664111)
+	require.True(t, ok)
 
 	// send attestation request
 	for i := range 3 {
@@ -228,9 +234,9 @@ func TestManager(t *testing.T) {
 		return true
 	}, 5*time.Second, 50*time.Millisecond)
 
-	messages := make([]payload.Message, 0, len(policy.Voters.VoterDataMap))
+	messages := make([]payload.Message, 0, len(signingPolicy.Voters.VoterDataMap))
 
-	for address := range policy.Voters.VoterDataMap {
+	for address := range signingPolicy.Voters.VoterDataMap {
 		currentLog := bitVoteMessage
 		currentLog.From = address
 		messages = append(messages, currentLog)

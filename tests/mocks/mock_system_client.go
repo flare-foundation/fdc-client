@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
@@ -19,6 +20,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+// requestHost turns a server bind address into a dialable URL host, so callers follow the
+// configured address instead of a hardcoded port. A bare ":port" bind means all interfaces.
+func requestHost(addr string) string {
+	if strings.HasPrefix(addr, ":") {
+		return "localhost" + addr
+	}
+
+	return addr
+}
 
 func MockSystemClient(systemConfig *config.System, userConfig *config.UserRaw, client *ethclient.Client, submitPrivateKey, submitSignaturePrivateKey string) {
 	submitAddress, _ := PrivKeyToAddress(submitPrivateKey)
@@ -92,7 +103,7 @@ func MakeGetRequest(
 
 	u := url.URL{
 		Scheme: "http",
-		Host:   "localhost:8080",
+		Host:   requestHost(cfg.Addr),
 		Path:   p,
 	}
 
