@@ -46,7 +46,8 @@ type RestServer struct {
 
 	// ignored:"true" — envconfig runs with an empty prefix, so an untagged field would bind
 	// from its bare uppercased name (TITLE, VERSION, FSPSUBPATH, …). The subpaths are
-	// route-bearing: a value without a leading "/" panics ServeMux at startup.
+	// route-bearing: ServeMux reads a value without a leading "/" as a host pattern, which
+	// registers without error and leaves every route unreachable.
 	Title      string `toml:"title" ignored:"true"`
 	FSPTitle   string `toml:"fsp_sub_router_title" ignored:"true"`
 	FSPSubpath string `toml:"fsp_sub_router_path" ignored:"true"`
