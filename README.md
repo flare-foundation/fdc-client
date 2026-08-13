@@ -134,6 +134,21 @@ cors_origin = ""
 `REST_ADDR`, `REST_API_KEY_NAME`, `REST_API_KEYS` (comma-separated) and `REST_CORS_ORIGIN`.
 The remaining fields are toml-only.
 
+### Rounds
+
+The client keeps the most recent rounds in memory in a cyclic buffer.
+The size bounds both worst-case heap use and how far back the DA endpoints can serve.
+
+```toml
+[rounds]
+buffer_size = 80 # minimum 3; omit the section for the default of 80
+```
+
+At the 90 s round length, 80 rounds is roughly 2 h of history.
+A value below 3 is a fatal configuration error, since rounds would age out before the FSP
+commit/reveal and DA proof paths have read them.
+The active value is reported as `roundBufferSize` by `GET /info`.
+
 ### Attestation Types
 
 For each supported attestation type, the ABI of the attestation response struct should be provided.

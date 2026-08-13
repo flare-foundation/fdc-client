@@ -4,6 +4,10 @@ chain = "coston"
 
 protocol_id = 200
 
+[rounds]
+# most-recent rounds kept in memory; minimum 3, omit for the default of 80
+buffer_size = 80
+
 [db]
 host = "localhost"
 port = 3306

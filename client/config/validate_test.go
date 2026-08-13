@@ -28,6 +28,8 @@ func baseValidConfig() *UserRaw {
 			TimeOff:              2 * time.Second,
 		},
 	}
+	// ReadUserRaw resolves an unset buffer_size; a directly-built UserRaw must set it itself.
+	u.Rounds = Rounds{BufferSize: DefaultRoundBufferSize}
 	return u
 }
 
@@ -68,6 +70,18 @@ func TestValidate(t *testing.T) {
 			s := u.AttestationTypeConfig["Payment"].Sources["BTC"]
 			s.QueueName = "does-not-exist"
 			u.AttestationTypeConfig["Payment"].Sources["BTC"] = s
+		}, true, ""},
+		{"roundBufferAtFloor", func(u *UserRaw) {
+			u.Rounds.BufferSize = MinRoundBufferSize
+		}, false, ""},
+		{"roundBufferBelowFloor", func(u *UserRaw) {
+			u.Rounds.BufferSize = MinRoundBufferSize - 1
+		}, true, ""},
+		{"roundBufferZero", func(u *UserRaw) {
+			u.Rounds.BufferSize = 0
+		}, true, ""},
+		{"roundBufferNegative", func(u *UserRaw) {
+			u.Rounds.BufferSize = -1
 		}, true, ""},
 	}
 

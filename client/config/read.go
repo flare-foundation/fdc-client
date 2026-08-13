@@ -56,8 +56,20 @@ func Read(userFilePath, systemDirectoryPath string) (*UserRaw, *System, error) {
 }
 
 // ReadUserRaw reads a UserRaw configuration from a toml file at filePath.
+//
+// An unset rounds.buffer_size resolves to DefaultRoundBufferSize, so every consumer sees a
+// usable value and Validate only ever judges an explicitly configured one.
 func ReadUserRaw(filePath string) (UserRaw, error) {
-	return toml.Read[UserRaw](filePath, true)
+	userConfigRaw, err := toml.Read[UserRaw](filePath, true)
+	if err != nil {
+		return userConfigRaw, err
+	}
+
+	if userConfigRaw.Rounds.BufferSize == 0 {
+		userConfigRaw.Rounds.BufferSize = DefaultRoundBufferSize
+	}
+
+	return userConfigRaw, nil
 }
 
 // ReadSystem reads the System configuration for the given chain and protocolID from <directory>/<protocolID>/<chain>.toml.

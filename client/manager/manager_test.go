@@ -108,7 +108,7 @@ func TestManagerMethods(t *testing.T) {
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(config.DefaultRoundBufferSize)
 	mngr, err := New(&cfg, attestationTypeConfig, sharedDataPipes)
 	require.NoError(t, err)
 
@@ -167,7 +167,7 @@ func TestManager(t *testing.T) {
 	setVerifierURL(attestationTypeConfig, mocks.MockVerifierForTests(t, testResponse, requestLog))
 
 	// initialize
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(config.DefaultRoundBufferSize)
 	mngr, err := New(&cfg, attestationTypeConfig, sharedDataPipes)
 	require.NoError(t, err)
 
@@ -269,7 +269,7 @@ func TestRetryUnsuccessfulChosenConcurrent(t *testing.T) {
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	mngr, err := New(&cfg, attestationTypeConfig, shared.NewDataPipes())
+	mngr, err := New(&cfg, attestationTypeConfig, shared.NewDataPipes(config.DefaultRoundBufferSize))
 	require.NoError(t, err)
 
 	ctx := t.Context() // cancelled when the test ends, stopping the queue goroutines

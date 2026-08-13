@@ -10,6 +10,7 @@ import (
 // InfoSource provides client status data for the info endpoint.
 type InfoSource interface {
 	Snapshot() (oldest, newest uint32, hasRounds bool, policies []shared.SigningPolicySummary)
+	RoundBufferSize() int
 }
 
 var _ InfoSource = (*shared.Status)(nil)
@@ -43,7 +44,7 @@ func (c *infoController) info(w http.ResponseWriter, _ *http.Request) {
 		OldestRound:     oldest,
 		NewestRound:     newest,
 		CurrentEpoch:    currentEpoch,
-		RoundBufferSize: shared.RoundBufferSize,
+		RoundBufferSize: c.source.RoundBufferSize(),
 		SigningPolicies: policies,
 		ServerTime:      time.Now().Unix(),
 	})

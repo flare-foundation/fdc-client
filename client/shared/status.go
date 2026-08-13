@@ -16,11 +16,18 @@ type Status struct {
 	newestRound     uint32
 	hasRounds       bool
 	signingPolicies []SigningPolicySummary
+
+	roundBufferSize int // immutable after construction, so read without the lock
 }
 
-// NewStatus creates a new Status.
-func NewStatus() *Status {
-	return &Status{}
+// NewStatus creates a new Status for a round buffer of roundBufferSize rounds.
+func NewStatus(roundBufferSize int) *Status {
+	return &Status{roundBufferSize: roundBufferSize}
+}
+
+// RoundBufferSize is the number of most-recent rounds kept in memory.
+func (s *Status) RoundBufferSize() int {
+	return s.roundBufferSize
 }
 
 // UpdateRound records that a round with the given ID was created.
@@ -39,8 +46,8 @@ func (s *Status) UpdateRound(id uint32) {
 		s.newestRound = id
 	}
 
-	if s.newestRound-s.oldestRound >= uint32(RoundBufferSize) {
-		s.oldestRound = s.newestRound - uint32(RoundBufferSize) + 1
+	if s.newestRound-s.oldestRound >= uint32(s.roundBufferSize) {
+		s.oldestRound = s.newestRound - uint32(s.roundBufferSize) + 1
 	}
 }
 

@@ -16,6 +16,7 @@ type userCommon struct {
 	ProtocolID uint8           `toml:"protocol_id"`
 	DB         database.Config `toml:"db"`
 	RestServer RestServer      `toml:"rest_server"`
+	Rounds     Rounds          `toml:"rounds"`
 	Queues     Queues          `toml:"queues"`
 	Logging    logger.Config   `toml:"logger"`
 }
@@ -57,6 +58,22 @@ type RestServer struct {
 
 	Version    string `toml:"version" ignored:"true"`
 	CORSOrigin string `toml:"cors_origin" envconfig:"REST_CORS_ORIGIN"`
+}
+
+const (
+	// DefaultRoundBufferSize is the round-buffer size applied when rounds.buffer_size is unset.
+	// At ~90s per round this is roughly 2h of history.
+	DefaultRoundBufferSize = 80
+	// MinRoundBufferSize is the smallest buffer the protocol can still be served from; below it
+	// rounds age out before the FSP commit/reveal and DA proof paths have read them.
+	MinRoundBufferSize = 3
+)
+
+// Rounds holds settings for the in-memory round buffer.
+type Rounds struct {
+	// BufferSize is the number of most-recent rounds kept in memory.
+	// Unset (0) resolves to DefaultRoundBufferSize; see ReadUserRaw.
+	BufferSize int `toml:"buffer_size"`
 }
 
 // Addresses holds the on-chain contract addresses the client interacts with.

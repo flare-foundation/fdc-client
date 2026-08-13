@@ -54,7 +54,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Prepare shared data connections that collector, manager and server will use
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(userConfigRaw.Rounds.BufferSize)
 
 	// Start attestation client collector
 	col := collector.New(userConfigRaw, systemConfig, sharedDataPipes)

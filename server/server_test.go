@@ -63,7 +63,7 @@ func TestServer(t *testing.T) {
 		APIKeys:    []string{"12345", "123456"},
 	}
 
-	s := server.New(rounds, 200, serverConfig, shared.NewStatus())
+	s := server.New(rounds, 200, serverConfig, shared.NewStatus(config.DefaultRoundBufferSize))
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()

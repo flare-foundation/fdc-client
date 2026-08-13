@@ -23,9 +23,10 @@ The code applies no default: `0` still means unbounded, and now logs a startup w
 Leaving a queue throttle at `0` is still accepted but logs a startup warning.
 - **Behavioral:** the round buffer holds 80 rounds instead of 256, reducing the window the DA endpoints can serve from roughly 6.4 h to 2 h.
 The active value is reported as `roundBufferSize` by `GET /info`.
+It is now configurable as `buffer_size` in a new `[rounds]` section of the user config; omitting the section keeps the default of 80, and a value below 3 is a fatal configuration error.
 - The `size` key was removed from every `[queues.*]` block in `configs/userConfig.toml`; it was never a recognised option and was silently ignored.
 - The client now shuts down immediately on an interrupt signal instead of waiting two minutes.
-- Bumped go-ethereum to 1.17.5, go-flare-common to 09a10067, and Go to 1.26.5, clearing the standard library vulnerabilities reported by govulncheck.
+- Bumped go-ethereum to 1.17.5, go-flare-common to 09a10067, and Go to 1.26.6, clearing the standard library vulnerabilities reported by govulncheck.
 - Attestation requests beyond the 65535th in a round are discarded, since a bit vote cannot address them.
 
 ### Removed

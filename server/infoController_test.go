@@ -12,6 +12,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// bufferSize is deliberately not the default, so the handler cannot pass by echoing a constant.
+const mockRoundBufferSize = 17
+
 type mockInfoSource struct {
 	oldest   uint32
 	newest   uint32
@@ -21,6 +24,10 @@ type mockInfoSource struct {
 
 func (m *mockInfoSource) Snapshot() (uint32, uint32, bool, []shared.SigningPolicySummary) {
 	return m.oldest, m.newest, m.has, m.policies
+}
+
+func (m *mockInfoSource) RoundBufferSize() int {
+	return mockRoundBufferSize
 }
 
 func TestInfoHandler(t *testing.T) {
@@ -73,7 +80,7 @@ func TestInfoHandler(t *testing.T) {
 			assert.Equal(t, tc.wantOldest, rsp.OldestRound)
 			assert.Equal(t, tc.wantNewest, rsp.NewestRound)
 			assert.Equal(t, tc.wantEpoch, rsp.CurrentEpoch)
-			assert.Equal(t, shared.RoundBufferSize, rsp.RoundBufferSize)
+			assert.Equal(t, mockRoundBufferSize, rsp.RoundBufferSize)
 			assert.Len(t, rsp.SigningPolicies, tc.wantPolicies)
 			assert.NotZero(t, rsp.ServerTime)
 		})

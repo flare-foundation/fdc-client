@@ -20,6 +20,12 @@ const (
 func (u *UserRaw) Validate() (warnings []string, err error) {
 	var errs []error
 
+	if u.Rounds.BufferSize < MinRoundBufferSize {
+		errs = append(errs, fmt.Errorf(
+			"rounds.buffer_size is %d; it must be at least %d, or unset for the default of %d",
+			u.Rounds.BufferSize, MinRoundBufferSize, DefaultRoundBufferSize))
+	}
+
 	for name, q := range u.Queues {
 		if q.MaxWorkers == 0 {
 			warnings = append(warnings, fmt.Sprintf(

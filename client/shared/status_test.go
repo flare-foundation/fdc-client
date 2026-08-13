@@ -7,8 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testRoundBufferSize = 80
+
 func TestUpdateRoundFirst(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 
 	s.UpdateRound(100)
 
@@ -19,7 +21,7 @@ func TestUpdateRoundFirst(t *testing.T) {
 }
 
 func TestUpdateRoundProgression(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 
 	s.UpdateRound(10)
 	s.UpdateRound(15)
@@ -31,18 +33,19 @@ func TestUpdateRoundProgression(t *testing.T) {
 }
 
 func TestUpdateRoundBufferWrap(t *testing.T) {
-	s := NewStatus()
+	const bufferSize = 5 // not the default, so the configured size must actually be honoured
+	s := NewStatus(bufferSize)
 
 	s.UpdateRound(1)
-	s.UpdateRound(uint32(RoundBufferSize) + 1) // gap exceeds buffer
+	s.UpdateRound(bufferSize + 1) // gap exceeds buffer
 
 	oldest, newest, _, _ := s.Snapshot()
-	assert.Equal(t, uint32(RoundBufferSize)+1, newest)
+	assert.Equal(t, uint32(bufferSize)+1, newest)
 	assert.Equal(t, uint32(2), oldest) // newest - bufferSize + 1
 }
 
 func TestAddPolicyAndSnapshot(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 
 	s.AddPolicy(SigningPolicySummary{RewardEpochID: 10, StartVotingRoundID: 1000, VoterCount: 50})
 	s.AddPolicy(SigningPolicySummary{RewardEpochID: 11, StartVotingRoundID: 1240, VoterCount: 55})
@@ -59,7 +62,7 @@ func TestAddPolicyAndSnapshot(t *testing.T) {
 }
 
 func TestPrunePolicies(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 
 	s.AddPolicy(SigningPolicySummary{RewardEpochID: 5, StartVotingRoundID: 500})
 	s.AddPolicy(SigningPolicySummary{RewardEpochID: 6, StartVotingRoundID: 740})
@@ -73,7 +76,7 @@ func TestPrunePolicies(t *testing.T) {
 }
 
 func TestPrunePoliciesEmpty(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 	s.AddPolicy(SigningPolicySummary{RewardEpochID: 1})
 
 	s.PrunePolicies(nil)
@@ -83,7 +86,7 @@ func TestPrunePoliciesEmpty(t *testing.T) {
 }
 
 func TestSnapshotEmpty(t *testing.T) {
-	s := NewStatus()
+	s := NewStatus(testRoundBufferSize)
 
 	oldest, newest, hasRounds, policies := s.Snapshot()
 	assert.False(t, hasRounds)

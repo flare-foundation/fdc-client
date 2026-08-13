@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/kelseyhightower/envconfig"
@@ -32,6 +34,30 @@ func TestRestServerIgnoresBareEnvVars(t *testing.T) {
 	require.Equal(t, "daTitle", cfg.DATitle)
 	require.Equal(t, "/da", cfg.DAPSubpath)
 	require.Equal(t, "1.0.0", cfg.Version)
+}
+
+// TestReadUserRawResolvesRoundBufferDefault pins the unset -> default resolution. Without it a
+// config with no [rounds] section would build a zero-length round buffer.
+func TestReadUserRawResolvesRoundBufferDefault(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "user.toml")
+	require.NoError(t, os.WriteFile(path, []byte("chain = \"coston\"\nprotocol_id = 200\n"), 0o600))
+
+	u, err := ReadUserRaw(path)
+	require.NoError(t, err)
+	require.Equal(t, DefaultRoundBufferSize, u.Rounds.BufferSize)
+}
+
+// TestReadUserRawKeepsExplicitRoundBuffer guards the other direction — a configured value must survive.
+func TestReadUserRawKeepsExplicitRoundBuffer(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "user.toml")
+	require.NoError(t, os.WriteFile(path,
+		[]byte("chain = \"coston\"\nprotocol_id = 200\n\n[rounds]\nbuffer_size = 200\n"), 0o600))
+
+	u, err := ReadUserRaw(path)
+	require.NoError(t, err)
+	require.Equal(t, 200, u.Rounds.BufferSize)
 }
 
 // TestRestServerReadsTaggedEnvVars guards the other direction — the tags above must not
