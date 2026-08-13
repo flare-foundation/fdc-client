@@ -23,6 +23,8 @@ fsp_sub_router_path = "/fsp"
 da_sub_router_title = "DA endpoints"
 da_sub_router_path = "/da"
 version = "0.0.0"
+# allowed CORS origin; empty denies all cross-origin requests
+cors_origin = ""
 
 [logger]
 file = ""
@@ -206,42 +208,36 @@ queue = "xrp"
 
 # Queues
 [queues.btc]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.doge]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.xrp]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.eth]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.sgb]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.flr]
-size = 10
 max_dequeues_per_second = 200
 max_workers = 20
 max_attempts = 3

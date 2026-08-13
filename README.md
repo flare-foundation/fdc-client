@@ -126,7 +126,13 @@ fsp_sub_router_path = "/fsp"
 da_sub_router_title = "DA endpoints"
 da_sub_router_path = "/da"
 version = "0.0.0"
+# Allowed CORS origin. Empty denies all cross-origin requests.
+cors_origin = ""
 ```
+
+`addr`, `api_key_name`, `api_keys` and `cors_origin` can be overridden by the env vars
+`REST_ADDR`, `REST_API_KEY_NAME`, `REST_API_KEYS` (comma-separated) and `REST_CORS_ORIGIN`.
+The remaining fields are toml-only.
 
 ### Attestation Types
 
@@ -169,12 +175,20 @@ A queue ensures that the calls to the verifier server do not exceed server's lim
 Each queue has the following configs:
 
 ```toml
-[queue.<queueName>]
-max_dequeues_per_second = 100 # 0 for unlimited
-max_workers = 10 # 0 for unlimited
+[queues.<queueName>]
+max_dequeues_per_second = 200 # 0 disables rate limiting
+max_workers = 20 # 0 for unlimited workers
 max_attempts = 3
 time_off = "2s" # time off after each unsuccessful attempt.
+error_chan = false # if true, errors on final attempts are pushed to the error channel
 ```
+
+Every queue named by a verifier source must exist.
+A source referencing an unknown queue is a fatal configuration error and the client panics at startup.
+
+Setting `max_dequeues_per_second` or `max_workers` to `0` is accepted but logs a warning at startup,
+because an unbounded queue lets a request flood exhaust client and verifier resources.
+The shipped defaults are `200` and `20`.
 
 ### System Configs
 
