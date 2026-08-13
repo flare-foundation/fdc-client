@@ -19,29 +19,58 @@ import (
 // goroutine appends attestations via AddAttestation while the consensus worker concurrently runs
 // ComputeConsensusBitVote/retry(snapshot)/MerkleTree and the server reads via BitVote/Snapshot.
 // All must serialize on the round lock; run under -race.
+//
+// The consensus goroutine must reset the once-guard and vote over a seeded bitVote, or
+// ComputeConsensusBitVote returns at the guard (or errors on an empty bitVote set) and the
+// consensus half of the race covers nothing.
 func TestRaceAddAttestationVsConsensus(t *testing.T) {
-	vSet, err := voters.NewSet([]common.Address{{}}, []uint16{1}, nil)
+	const (
+		seeded     = 4 // attestations the bitVote is cast over
+		iterations = 300
+	)
+
+	voter := common.BytesToAddress([]byte{1})
+	vSet, err := voters.NewSet([]common.Address{voter}, []uint16{1},
+		map[common.Address]common.Address{voter: voter})
 	require.NoError(t, err)
 	r := round.New(1, vSet)
 
-	const iterations = 300
+	for i := range seeded {
+		r.AddAttestation(&attestation.Attestation{
+			Request: attestation.Request{byte(i), 0xAB},
+			Fee:     big.NewInt(1),
+			Indexes: []attestation.IndexLog{{BlockNumber: uint64(i), LogIndex: 0}},
+		})
+	}
+
+	// all seeded bits set; valid only while the round still holds exactly `seeded` attestations
+	require.NoError(t, r.ProcessBitVote(payload.Message{
+		From:    voter,
+		Payload: bitvotes.BitVote{Length: seeded, BitVector: big.NewInt(1<<seeded - 1)}.EncodeBitVote(),
+	}))
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	go func() { // ingest loop: append distinct attestations
+	go func() { // ingest loop: append distinct attestations, all sorting after the seeded ones
 		defer wg.Done()
 		for i := range iterations {
 			r.AddAttestation(&attestation.Attestation{
-				Request: attestation.Request{byte(i), byte(i >> 8), 0xAB},
+				Request: attestation.Request{byte(i), byte(i >> 8), 0xCD},
 				Fee:     big.NewInt(1),
-				Indexes: []attestation.IndexLog{{BlockNumber: uint64(i), LogIndex: 0}},
+				Indexes: []attestation.IndexLog{{BlockNumber: uint64(1000 + i), LogIndex: 0}},
 			})
 		}
 	}()
 	go func() { // consensus worker + server reads
 		defer wg.Done()
 		for range iterations {
-			_ = r.ComputeConsensusBitVote()
+			func() {
+				r.Lock()
+				defer r.Unlock()
+				r.ConsensusCalculationFinished = false // else the guard skips all but the first iteration
+			}()
+			require.NoError(t, r.ComputeConsensusBitVote(seeded))
 			r.GetConsensusBitVote()
 			_, _ = r.MerkleTree()
 			_ = r.AttestationsSnapshot()
@@ -50,6 +79,12 @@ func TestRaceAddAttestationVsConsensus(t *testing.T) {
 	}()
 
 	wg.Wait()
+
+	// the frozen prefix must survive the concurrent appends
+	bitVote, ok, computed := r.GetConsensusBitVote()
+	require.True(t, computed)
+	require.True(t, ok)
+	require.Equal(t, uint16(seeded), bitVote.Length)
 }
 
 // TestRaceProcessBitVoteVsConsensus proves the #25-class blocker is closed: ProcessBitVote now
@@ -105,7 +140,7 @@ func TestRaceProcessBitVoteVsConsensus(t *testing.T) {
 			r.Lock()
 			r.ConsensusCalculationFinished = false // force recompute so r.bitVotes is read each iteration
 			r.Unlock()
-			_ = r.ComputeConsensusBitVote()
+			_ = r.ComputeConsensusBitVote(nAttestations)
 			r.GetConsensusBitVote()
 		}
 	}()

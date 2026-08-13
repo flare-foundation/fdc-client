@@ -129,7 +129,13 @@ func (r *Round) BitVoteBytes() ([]byte, error) {
 }
 
 // ComputeConsensusBitVote computes the consensus BitVote according to the collected bitVotes and sets consensus status to the attestations.
-func (r *Round) ComputeConsensusBitVote() error {
+//
+// attestationCount is the attestation count the collected bitVotes were validated against
+// (ProcessBitVote rejects any other length). Computing over that prefix instead of the live
+// count keeps ConsensusBitVote.Length equal to the peers' even if an attestation is appended
+// between dispatch and this call; a request arriving that late sorts to the tail, so the
+// prefix is the same set every peer voted on.
+func (r *Round) ComputeConsensusBitVote(attestationCount int) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -140,9 +146,13 @@ func (r *Round) ComputeConsensusBitVote() error {
 	defer func() { r.ConsensusCalculationFinished = true }()
 	r.sortAttestations()
 
-	fees := make([]*big.Int, len(r.Attestations))
-	for i, a := range r.Attestations {
-		fees[i] = a.Fee
+	if attestationCount > len(r.Attestations) {
+		return fmt.Errorf("round %d: bitVotes cover %d attestations, have %d", r.ID, attestationCount, len(r.Attestations))
+	}
+
+	fees := make([]*big.Int, attestationCount)
+	for i := range attestationCount {
+		fees[i] = r.Attestations[i].Fee
 	}
 
 	consensus, err := bitvotes.EnsembleConsensusBitVote(r.bitVotes, fees, r.voterSet.TotalWeight, BitVoteMaxNoOfOperations)

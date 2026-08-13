@@ -126,7 +126,7 @@ func TestConcurrentRoundAccess(t *testing.T) {
 			r.Lock()
 			r.ConsensusCalculationFinished = false
 			r.Unlock()
-			_ = r.ComputeConsensusBitVote()
+			_ = r.ComputeConsensusBitVote(int(bitVote.Length))
 		},
 		func() { _, _ = controller.GetRequests(concurrencyRoundID) },
 		func() { _, _ = controller.GetAttestations(concurrencyRoundID) },

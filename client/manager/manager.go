@@ -25,6 +25,13 @@ import (
 // ctx-aware so a full buffer can never hang the loop.
 const consensusChanBuffer = 4
 
+// consensusJob pairs a round with the attestation count its collected bitVotes were validated
+// against, frozen on the ingest goroutine so a later append cannot change what is computed.
+type consensusJob struct {
+	round            *round.Round
+	attestationCount int
+}
+
 // Manager drives the per-round lifecycle: it consumes requests, bitVotes, and signing policies from the collector,
 // builds rounds, and publishes them through the shared storage.
 type Manager struct {
@@ -37,7 +44,7 @@ type Manager struct {
 	attestationTypeConfig config.AttestationTypes
 	queues                attestationQueues
 	status                *shared.Status
-	consensusCh           chan *round.Round // rounds dispatched to the consensus worker goroutine
+	consensusCh           chan consensusJob // rounds dispatched to the consensus worker goroutine
 }
 
 // New initializes attestation round manager from raw user configurations.
@@ -55,7 +62,7 @@ func New(configs *config.UserRaw, attestationTypeConfig config.AttestationTypes,
 			bitVotes:              sharedDataPipes.BitVotes,
 			requests:              sharedDataPipes.Requests,
 			status:                sharedDataPipes.Status,
-			consensusCh:           make(chan *round.Round, consensusChanBuffer),
+			consensusCh:           make(chan consensusJob, consensusChanBuffer),
 		},
 		nil
 }
@@ -133,8 +140,14 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 			// Dispatch the heavy consensus computation to the worker so it does not block
 			// ingestion of requests, bitVotes, and signing policies. The send is ctx-aware
 			// so a stopped worker cannot deadlock the ingest loop.
+			//
+			// Freeze the attestation count here: this goroutine is the only writer, so the count
+			// still matches what the bitVotes just processed were validated against. Reading it
+			// in the worker would race a later append and skew ConsensusBitVote.Length.
+			job := consensusJob{round: r, attestationCount: len(r.AttestationsSnapshot())}
+
 			select {
-			case m.consensusCh <- r:
+			case m.consensusCh <- job:
 			case <-ctx.Done():
 				logger.Infof("Manager exiting: %v", ctx.Err())
 				return
@@ -160,8 +173,8 @@ func (m *Manager) Run(ctx context.Context, cancel context.CancelFunc) {
 func (m *Manager) runConsensusWorker(ctx context.Context) {
 	for {
 		select {
-		case r := <-m.consensusCh:
-			m.computeConsensus(ctx, r)
+		case job := <-m.consensusCh:
+			m.computeConsensus(ctx, job)
 
 		case <-ctx.Done():
 			logger.Infof("consensus worker exiting: %v", ctx.Err())
@@ -173,7 +186,9 @@ func (m *Manager) runConsensusWorker(ctx context.Context) {
 // computeConsensus computes the consensus bitVote for a round and retries chosen-but-unconfirmed
 // attestations. It is idempotent (a round whose consensus already finished is skipped) and recovers
 // from panics so a single bad round cannot stop consensus for all future rounds.
-func (m *Manager) computeConsensus(ctx context.Context, r *round.Round) {
+func (m *Manager) computeConsensus(ctx context.Context, job consensusJob) {
+	r := job.round
+
 	defer func() {
 		if rec := recover(); rec != nil {
 			logger.Errorf("recovered panic computing consensus for round %d: %v", r.ID, rec)
@@ -185,7 +200,7 @@ func (m *Manager) computeConsensus(ctx context.Context, r *round.Round) {
 	}
 
 	now := time.Now()
-	err := r.ComputeConsensusBitVote()
+	err := r.ComputeConsensusBitVote(job.attestationCount)
 	logger.Debugf("BitVote algorithm finished in %s", time.Since(now))
 	if err != nil {
 		logger.Warnf("Failed bitVote in round %d: %s", r.ID, err)
