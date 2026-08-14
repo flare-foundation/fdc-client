@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Go 1.25.13, clearing the standard library vulnerabilities reported by govulncheck.
+
+### Removed
+
+- Code needed for VoterRegistry address and ABI changes. Reward epochs before the transition (417 on Flare and Songbird, 5451 on Coston, 5339 on Coston2) are no longer supported.
+
 ## [v1.3.0](https://github.com/flare-foundation/fdc-client/tree/v1.3.0) - 2026-7-14
 
 ### Changed

@@ -1,6 +1,6 @@
 module github.com/flare-foundation/fdc-client
 
-go 1.25.12
+go 1.25.13
 
 require (
 	github.com/BurntSushi/toml v1.4.0
