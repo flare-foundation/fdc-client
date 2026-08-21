@@ -5,6 +5,16 @@ relay_contract = "0x5A0773Ff307Bf7C71a832dBB5312237fD3437f9F"
 fdc_contract = "0x1750499D05Ed1674d822430FB960d5F6731fDf64"
 voter_registry_contract = "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d"
 
+# Scheduled switch to the redeployed Relay contract. Set both values, or neither.
+# The new Relay does not emit SigningPolicyInitialized for starting_reward_epoch itself:
+# that policy is initialized on relay_contract above and seeded into the new Relay at
+# deployment. Signing policies are read from relay_contract up to and including
+# starting_reward_epoch, and from the address below afterwards.
+# The indexer must index that address from its deployment block on; nothing backfills.
+# [relay_cutover]
+# address = "0x..."
+# starting_reward_epoch = 0
+
 [timing]
 t0 = 1729652370
 t0_reward_delay = 20000

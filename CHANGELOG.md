@@ -4,6 +4,10 @@
 
 ### Added
 
+- Optional `[relay_cutover]` section in the system config (`address`, `starting_reward_epoch`) that schedules the switch to a redeployed `Relay` contract.
+Signing policies are read from `relay_contract` up to and including `starting_reward_epoch` and from `relay_cutover.address` afterwards; events from the contract that is not authoritative for their reward epoch are ignored and logged.
+Unset, the client reads signing policies exactly as before.
+Setting only one of the two keys is a fatal configuration error.
 - API-key-protected `GET /info` endpoint returning client status: stored-round range, current epoch, round buffer size, signing-policy summaries, and server time.
 - `cors_origin` REST-server config option (and `REST_CORS_ORIGIN` env var) to set the allowed CORS origin; empty by default.
 - Environment-variable overrides for REST-server settings: `REST_ADDR`, `REST_API_KEY_NAME`, and `REST_API_KEYS` (comma-separated).

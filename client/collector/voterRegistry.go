@@ -7,10 +7,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/flare-foundation/go-flare-common/pkg/convert"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
-	"github.com/flare-foundation/go-flare-common/pkg/policy"
 	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/collector/registry"
@@ -78,26 +76,16 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 	return submitToSigning, nil
 }
 
-// AddSubmitAddressesToSigningPolicy parses SigningPolicyInitialized event, assembles map from submit addresses to signingPolicy addresses, and returns them as VotersData.
-func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, signingPolicyLog database.Log) (shared.VotersData, error) {
-	data, err := policy.ParseSigningPolicyInitializedEvent(signingPolicyLog)
-	if err != nil {
-		return shared.VotersData{}, fmt.Errorf("parsing signing policy initialized event: %w", err)
-	}
-
-	rewardEpochID, err := convert.BigToUint64Safe(data.RewardEpochId)
-	if err != nil {
-		return shared.VotersData{}, fmt.Errorf("reward epoch %v: %w", data.RewardEpochId, err)
-	}
-
-	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
+// addSubmitAddressesToSigningPolicy assembles the map from submit addresses to signingPolicy addresses for a parsed SigningPolicyInitialized event, and returns them as VotersData.
+func addSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, p parsedPolicy) (shared.VotersData, error) {
+	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, p.rewardEpochID)
 	if err != nil {
 		return shared.VotersData{}, fmt.Errorf("adding submit addresses: %s", err)
 	}
-	logger.Debugf("received %d registered submit addresses for reward epoch %d", len(submitToSigning), rewardEpochID)
+	logger.Debugf("received %d registered submit addresses for reward epoch %d", len(submitToSigning), p.rewardEpochID)
 
 	return shared.VotersData{
-		Policy:                 data,
+		Policy:                 p.event,
 		SubmitToSigningAddress: submitToSigning,
 	}, nil
 }

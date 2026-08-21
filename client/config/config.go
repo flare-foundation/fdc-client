@@ -35,8 +35,9 @@ type User struct {
 
 // System holds chain-specific configuration shared across users of the same chain and protocol.
 type System struct {
-	Addresses Addresses `toml:"addresses"`
-	Timing    Timing    `toml:"timing"`
+	Addresses    Addresses    `toml:"addresses"`
+	RelayCutover RelayCutover `toml:"relay_cutover"`
+	Timing       Timing       `toml:"timing"`
 }
 
 // RestServer holds the configuration for the REST server: bind address, API key auth, route titles, and CORS.
@@ -82,6 +83,37 @@ type Addresses struct {
 	RelayContract         common.Address `toml:"relay_contract"`
 	FdcContract           common.Address `toml:"fdc_contract"`
 	VoterRegistryContract common.Address `toml:"voter_registry_contract"`
+}
+
+// RelayCutover schedules the switch to a redeployed Relay contract: its address and
+// StartingRewardEpoch, the first reward epoch it is deployed with. Unset means no switch —
+// signing policies are read from Addresses.RelayContract exactly as before.
+//
+// StartingRewardEpoch is the same value the flare-system-client is configured with, but the
+// new Relay does not emit SigningPolicyInitialized for it: that policy is initialized on the
+// old Relay before the switch and seeded into the new one at deployment. The new Relay emits
+// from StartingRewardEpoch+1 on; see relaySource in client/collector.
+type RelayCutover struct {
+	Address common.Address `toml:"address"`
+
+	// signed so that a negative value is rejected by Validate rather than silently wrapping to a
+	// reward epoch no policy ever reaches
+	StartingRewardEpoch int64 `toml:"starting_reward_epoch"`
+}
+
+// Scheduled reports whether a switch to a new Relay is configured.
+func (c RelayCutover) Scheduled() bool {
+	return c.Address != (common.Address{}) && c.StartingRewardEpoch > 0
+}
+
+// StartingEpoch is StartingRewardEpoch as a reward epoch ID.
+// Only reached for a scheduled cutover, which is positive by construction.
+func (c RelayCutover) StartingEpoch() uint64 {
+	if c.StartingRewardEpoch < 0 {
+		return 0
+	}
+
+	return uint64(c.StartingRewardEpoch)
 }
 
 // Source describes a single verifier endpoint used for an attestation type.
