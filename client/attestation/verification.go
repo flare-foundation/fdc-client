@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
+
 	"github.com/flare-foundation/fdc-client/client/utils"
 )
 
@@ -123,15 +125,9 @@ func (r Response) LUT() (uint64, error) {
 		return 0, errors.New("response is too short")
 	}
 
-	lut := r[lutStartByte:lutIDEndByte]
-	safe := big.NewInt(0)
-	safe = safe.SetBytes(lut)
+	lut := new(big.Int).SetBytes(r[lutStartByte:lutIDEndByte])
 
-	if safe.IsUint64() {
-		return safe.Uint64(), nil
-	} else {
-		return 0, errors.New("lut too big")
-	}
+	return convert.BigToUint64Safe(lut)
 }
 
 // validLUT safely checks whether roundStart - lut < lutLimit.

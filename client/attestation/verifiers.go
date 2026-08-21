@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 const timeout = 5 * time.Second    // maximal duration for the verifier to resolve the query
 const maxRespSize = 10 * (1 << 20) // 10 MB for maximal response size of the verifier
 const ValidResponseStatus = "VALID"
+
+var verifierClient = &http.Client{Timeout: timeout}
 
 type ABIEncodedRequestBody struct {
 	ABIEncodedRequest string `json:"abiEncodedRequest"`
@@ -32,37 +32,35 @@ type VerifierCredentials struct {
 	apiKey string
 }
 
-// ResolveAttestationRequest sends the attestation request to the verifier server with verifierCredentials and stores the response.
+// ResolveAttestationRequest sends the attestation request to the verifier server with credentials and returns the response.
 // Returns true if the response is "VALID" and false otherwise.
-func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, bool, error) {
-	client := &http.Client{Timeout: timeout}
-	requestBytes := att.Request
-	encoded := hex.EncodeToString(requestBytes)
+func ResolveAttestationRequest(ctx context.Context, request Request, credentials *VerifierCredentials) ([]byte, bool, error) {
+	encoded := hex.EncodeToString(request)
 	payload := ABIEncodedRequestBody{ABIEncodedRequest: "0x" + encoded}
 
 	encodedBody, err := json.Marshal(payload)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to encode request body")
+		return nil, false, fmt.Errorf("failed to encode request body: %w", err)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, "POST", att.Credentials.URL, bytes.NewBuffer(encodedBody))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, credentials.URL, bytes.NewBuffer(encodedBody))
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to create http request")
+		return nil, false, fmt.Errorf("failed to create http request: %w", err)
 	}
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-API-KEY", att.Credentials.apiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-API-KEY", credentials.apiKey)
 
-	resp, err := client.Do(request)
+	resp, err := verifierClient.Do(httpReq)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to send http request")
+		return nil, false, fmt.Errorf("failed to send http request: %w", err)
 	}
+	defer resp.Body.Close() //nolint:errcheck // best-effort close of response body
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, false, fmt.Errorf("request responded with code %d", resp.StatusCode)
 	}
 
 	respLimited := &io.LimitedReader{R: resp.Body, N: maxRespSize}
-	// close response body after function ends
-	defer resp.Body.Close() //nolint:errcheck
 
 	responseBody := ABIEncodedResponseBody{}
 
@@ -71,7 +69,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	err = decoder.Decode(&responseBody)
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to decode response body")
+		return nil, false, fmt.Errorf("failed to decode response body: %w", err)
 	}
 	if responseBody.Status != ValidResponseStatus {
 		return nil, false, nil
@@ -79,7 +77,7 @@ func ResolveAttestationRequest(ctx context.Context, att *Attestation) ([]byte, b
 
 	responseBytes, err := hex.DecodeString(strings.TrimPrefix(responseBody.ABIEncodedResponse, "0x"))
 	if err != nil {
-		return nil, false, errors.Wrap(err, "failed to decode ABI encoded response")
+		return nil, false, fmt.Errorf("failed to decode ABI encoded response: %w", err)
 	}
 
 	return responseBytes, true, nil

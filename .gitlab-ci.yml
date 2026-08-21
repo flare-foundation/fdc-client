@@ -17,10 +17,12 @@ include:
   - component: gitlab.com/flarenetwork/ci-components-private/lint-shell@2
   - component: gitlab.com/flarenetwork/ci-components-private/test-go@2
     inputs:
-      go_version: "1.25.13"
+      go_version: "1.26.6"
+      cobertura_go_version: "1.26.6"
   - component: gitlab.com/flarenetwork/ci-components-private/lint-go@2
     inputs:
-      go_version: "1.25.13"
-      golangci_version: "v2.5.0"
+      # v2.5.0 lacks the modernize linter that .golangci.yml enables
+      go_version: "1.26.6"
+      golangci_version: "v2.12.2"
       golangci_config_file: ".golangci.yml"
   - template: Jobs/Secret-Detection.latest.gitlab-ci.yml

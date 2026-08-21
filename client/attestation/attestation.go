@@ -3,6 +3,7 @@ package attestation
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -14,7 +15,6 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/events"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/priority"
-	"github.com/pkg/errors"
 
 	bitvotes "github.com/flare-foundation/fdc-client/client/attestation/bitVotes"
 	"github.com/flare-foundation/fdc-client/client/config"
@@ -106,7 +106,7 @@ type Attestation struct {
 	sync.RWMutex
 }
 
-// EarlierLog returns true if a has lower blockNumber then b or has the same blockNumber and lower LogIndex.
+// EarlierLog returns true if a has lower blockNumber than b or has the same blockNumber and lower LogIndex.
 // Otherwise, it returns false.
 func EarlierLog(a, b IndexLog) bool {
 	if a.BlockNumber < b.BlockNumber {
@@ -123,12 +123,12 @@ func EarlierLog(a, b IndexLog) bool {
 func AttestationFromDatabaseLog(request database.Log) (*Attestation, error) {
 	rLog, err := ParseAttestationRequestLog(request)
 	if err != nil {
-		return nil, fmt.Errorf("parsing log: %s", err)
+		return nil, fmt.Errorf("parsing log: %w", err)
 	}
 
 	rID, err := timing.RoundIDForTS(request.Timestamp)
 	if err != nil {
-		return nil, fmt.Errorf("parsing log, roundID: %s", err)
+		return nil, fmt.Errorf("parsing log, roundID: %w", err)
 	}
 
 	indexes := []IndexLog{{request.BlockNumber, request.LogIndex}}
@@ -175,20 +175,33 @@ func (a *Attestation) Discard(ctx context.Context) bool {
 }
 
 // Handle sends the attestation request to the correct verifier server and validates the response.
-// The response is saved in the struct.
+// The response is saved in the struct. The verifier round-trip runs without the attestation lock
+// so a slow verifier cannot stall other users of this attestation.
 func (a *Attestation) Handle(ctx context.Context) error {
+	a.Lock()
+	// Re-check under the lock so a redundant handling cannot downgrade a confirmed Success.
+	if a.Status == Success {
+		a.Unlock()
+		return nil
+	}
+	// Request and Credentials are set in PrepareRequest and not mutated after, so the POST can run unlocked.
+	request := a.Request
+	credentials := a.Credentials
+	a.Unlock()
+
+	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, request, credentials)
+
 	a.Lock()
 	defer a.Unlock()
 
-	// Re-check under the lock so a redundant handling cannot downgrade a confirmed Success.
+	// A concurrent handling may have confirmed the request while the lock was released.
 	if a.Status == Success {
 		return nil
 	}
 
-	responseBytes, confirmed, err := ResolveAttestationRequest(ctx, a)
 	if err != nil {
 		a.Status = ProcessError
-		return errors.Wrap(err, "unable to resolve attestation request")
+		return fmt.Errorf("unable to resolve attestation request: %w", err)
 	}
 	if !confirmed {
 		a.Status = Unconfirmed
@@ -199,13 +212,13 @@ func (a *Attestation) Handle(ctx context.Context) error {
 	a.Response = responseBytes
 	err = a.validateResponse()
 	if err != nil {
-		return errors.Wrap(err, "unable to validate attestation response")
+		return fmt.Errorf("unable to validate attestation response: %w", err)
 	}
 
 	return nil
 }
 
-// prepareRequest adds response ABI, LUT limit and verifierCredentials to the Attestation.
+// PrepareRequest adds response ABI, LUT limit and verifierCredentials to the Attestation.
 func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationTypes) error {
 	a.Lock()
 	defer a.Unlock()
@@ -213,13 +226,13 @@ func (a *Attestation) PrepareRequest(attestationTypesConfigs config.AttestationT
 	attType, err := a.Request.AttestationType()
 	if err != nil {
 		a.Status = ProcessError
-		return err
+		return fmt.Errorf("getting attestation type: %w", err)
 	}
 
 	source, err := a.Request.Source()
 	if err != nil {
 		a.Status = ProcessError
-		return err
+		return fmt.Errorf("getting attestation source: %w", err)
 	}
 
 	attestationTypeConfig, ok := attestationTypesConfigs[attType]
@@ -251,13 +264,13 @@ func (a *Attestation) validateResponse() error {
 	micReq, err := a.Request.MIC()
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("reading mic in request: %s, %s ", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("reading mic in request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	micRes, err := a.Response.ComputeMIC(a.ResponseABI)
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("cannot compute mic for request: %s, %s", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("cannot compute mic for request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	if micReq != micRes {
@@ -269,7 +282,7 @@ func (a *Attestation) validateResponse() error {
 	lut, err := a.Response.LUT()
 	if err != nil {
 		a.Status = ProcessError
-		return fmt.Errorf("cannot read lut from request: %s, %s", hex.EncodeToString(a.Request), err)
+		return fmt.Errorf("cannot read lut from request: %s: %w", hex.EncodeToString(a.Request), err)
 	}
 
 	roundStart := timing.ChooseStartTS(a.RoundID)
@@ -294,12 +307,12 @@ func (a *Attestation) validateResponse() error {
 func ParseAttestationRequestLog(dbLog database.Log) (*fdchub.FdcHubAttestationRequest, error) {
 	contractLog, err := events.ConvertDatabaseLogToChainLog(dbLog)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("converting database log: %w", err)
 	}
 	return fdcFilterer.ParseAttestationRequest(*contractLog)
 }
 
-// index is used to safely retrieve Index for sorting purposes.
+// Index is used to safely retrieve Index for sorting purposes.
 func (a *Attestation) Index() IndexLog {
 	if len(a.Indexes) > 0 {
 		return a.Indexes[0]
@@ -317,7 +330,7 @@ func BitVoteFromAttestations(attestations []*Attestation) (bitvotes.BitVote, err
 
 	// Max bitVector size for bitVote is fits into 2 bytes (65536 bits)
 	if len(attestations) > math.MaxUint16 {
-		return bitvotes.BitVote{}, errors.New("more than 65536 attestations")
+		return bitvotes.BitVote{}, errors.New("more than 65535 attestations")
 	}
 
 	for i, a := range attestations {

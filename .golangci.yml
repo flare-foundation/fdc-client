@@ -1,6 +1,6 @@
 version: "2"
 run:
-  go: "1.25.1"
+  go: "1.26.6"
   modules-download-mode: readonly
 linters:
   default: standard
@@ -20,6 +20,13 @@ linters:
     - nolintlint
     - unconvert
     - whitespace
+
+    - modernize
+    - thelper
+    - usestdlibvars
+    - usetesting
+    - predeclared
+    - prealloc
 
   settings:
     exhaustive:

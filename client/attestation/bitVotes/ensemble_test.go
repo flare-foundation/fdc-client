@@ -20,7 +20,7 @@ func TestEnsembleRandom(t *testing.T) {
 	prob := 0.88
 
 	totalWeight := uint16(0)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		bitVote := randomBitVotes(numAttestations, prob)
 		weightedBitVotes[j] = bitVote
 
@@ -33,7 +33,7 @@ func TestEnsembleRandom(t *testing.T) {
 
 	fees := make([]*big.Int, numAttestations)
 	aggFees := make([]*bitvotes.AggregatedBit, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fees[j] = big.NewInt(1)
 
 		aggFee := bitvotes.AggregatedBit{Fee: big.NewInt(1), Indexes: []int{j}, Support: 1}
@@ -83,7 +83,7 @@ func TestEnsembleFixed(t *testing.T) {
 	}
 
 	fees := make([]*big.Int, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fees[j] = big.NewInt(1)
 	}
 

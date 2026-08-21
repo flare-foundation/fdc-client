@@ -4,7 +4,7 @@ import (
 	"bytes"
 )
 
-// prepend places the element at the beginning of the slice and moves the potentially replaced element to the end.
+// Prepend places the element at the beginning of the slice and moves the potentially replaced element to the end.
 func Prepend[T any](slice []T, element T) []T {
 	if len(slice) == 0 {
 		slice = append(slice, element)
@@ -18,22 +18,8 @@ func Prepend[T any](slice []T, element T) []T {
 	return slice
 }
 
-func Keys[K comparable, V any](m map[K]V) []K {
-	keys := make([]K, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-func Values[K comparable, V any](m map[K]V) []V {
-	values := make([]V, 0, len(m))
-	for _, v := range m {
-		values = append(values, v)
-	}
-	return values
-}
-
+// Invert returns a new map whose keys and values are swapped.
+// If m has duplicate values, only one of the corresponding keys is preserved.
 func Invert[K comparable, V comparable](m map[K]V) map[V]K {
 	invertedMap := make(map[V]K)
 	for k, v := range m {
@@ -43,6 +29,7 @@ func Invert[K comparable, V comparable](m map[K]V) map[V]K {
 	return invertedMap
 }
 
+// Bytes32ToString returns b as a string with trailing zero bytes stripped.
 func Bytes32ToString(b [32]byte) string {
 	return string(bytes.Trim(b[:], "\x00"))
 }

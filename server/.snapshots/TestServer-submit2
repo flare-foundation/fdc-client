@@ -1,5 +1,0 @@
-(*payload.SubprotocolResponse)({
-  Status: (payload.ResponseStatus) (len=2) "OK",
-  Data: (string) (len=22) "0xc8000000010003000101",
-  AdditionalData: (string) ""
-})

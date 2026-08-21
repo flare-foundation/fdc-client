@@ -1,39 +1,45 @@
 package server
 
-// wip
-
 import (
 	"errors"
+	"net/http"
 	"strconv"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
-	"github.com/flare-foundation/go-flare-common/pkg/restserver"
 	"github.com/flare-foundation/go-flare-common/pkg/storage"
 
 	"github.com/flare-foundation/fdc-client/client/round"
 )
 
+// DAController handles data availability endpoints.
 type DAController struct {
-	Rounds *storage.Cyclic[uint32, *round.Round]
+	rounds *storage.Cyclic[uint32, *round.Round]
 }
 
+// NewDAController creates a new DAController.
+func NewDAController(rounds *storage.Cyclic[uint32, *round.Round]) *DAController {
+	return &DAController{rounds: rounds}
+}
+
+// RequestsResponse is the response for the getRequests endpoint.
 type RequestsResponse struct {
-	Status   DAResponseStatus
-	Requests []DARequest
+	Status   DAResponseStatus `json:"status"`
+	Requests []DARequest      `json:"requests"`
 }
 
+// AttestationResponse is the response for the getAttestations endpoint.
 type AttestationResponse struct {
-	Status       DAResponseStatus
-	Attestations []DAAttestation
+	Status       DAResponseStatus `json:"status"`
+	Attestations []DAAttestation  `json:"attestations"`
 }
 
-func validateRoundIDParam(params map[string]string) (uint32, error) {
-	votingRoundIDStr, exists := params["votingRoundID"]
-	if !exists {
+func validateRoundIDParam(r *http.Request) (uint32, error) {
+	vrStr := r.PathValue("votingRoundID")
+	if vrStr == "" {
 		return 0, errors.New("missing votingRound param")
 	}
 
-	votingRoundID, err := strconv.ParseUint(votingRoundIDStr, 10, 32)
+	votingRoundID, err := strconv.ParseUint(vrStr, 10, 32)
 	if err != nil {
 		return 0, errors.New("votingRound param is not a 32 bit decimal number")
 	}
@@ -41,40 +47,36 @@ func validateRoundIDParam(params map[string]string) (uint32, error) {
 	return uint32(votingRoundID), nil
 }
 
-func (c *DAController) getRequestController(
-	params map[string]string,
-	_ any,
-	_ any,
-) (RequestsResponse, *restserver.ErrorHandler) {
-	votingRoundID, err := validateRoundIDParam(params)
+func (c *DAController) getRequests(w http.ResponseWriter, r *http.Request) {
+	votingRoundID, err := validateRoundIDParam(r)
 	if err != nil {
 		logger.Error(err)
-		return RequestsResponse{}, restserver.BadParamsErrorHandler(err)
+		http.Error(w, "invalid request parameters", http.StatusBadRequest)
+		return
 	}
 
 	requests, exists := c.GetRequests(votingRoundID)
 	if !exists {
-		return RequestsResponse{Status: NotAvailable}, nil
+		writeJSON(w, RequestsResponse{Status: NotAvailable})
+		return
 	}
 
-	return RequestsResponse{Status: Ok, Requests: requests}, nil
+	writeJSON(w, RequestsResponse{Status: Ok, Requests: requests})
 }
 
-func (c *DAController) getAttestationController(
-	params map[string]string,
-	_ any,
-	_ any,
-) (AttestationResponse, *restserver.ErrorHandler) {
-	votingRoundID, err := validateRoundIDParam(params)
+func (c *DAController) getAttestations(w http.ResponseWriter, r *http.Request) {
+	votingRoundID, err := validateRoundIDParam(r)
 	if err != nil {
 		logger.Error(err)
-		return AttestationResponse{}, restserver.BadParamsErrorHandler(err)
+		http.Error(w, "invalid request parameters", http.StatusBadRequest)
+		return
 	}
 
 	attestations, exists := c.GetAttestations(votingRoundID)
 	if !exists {
-		return AttestationResponse{Status: NotAvailable}, nil
+		writeJSON(w, AttestationResponse{Status: NotAvailable})
+		return
 	}
 
-	return AttestationResponse{Status: Ok, Attestations: attestations}, nil
+	writeJSON(w, AttestationResponse{Status: Ok, Attestations: attestations})
 }

@@ -2,87 +2,74 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
-	"github.com/flare-foundation/go-flare-common/pkg/payload"
-	"github.com/flare-foundation/go-flare-common/pkg/restserver"
 	"github.com/flare-foundation/go-flare-common/pkg/storage"
 
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/round"
-
-	"github.com/gorilla/mux"
-	"github.com/rs/cors"
 )
 
 const shutdownTimeout = 5 * time.Second
 
+// Server wraps an HTTP server.
 type Server struct {
 	srv *http.Server
 }
 
+// New creates a new Server with routes, API key auth, and CORS.
 func New(
 	rounds *storage.Cyclic[uint32, *round.Round],
 	protocolID uint8,
 	serverConfig config.RestServer,
+	status InfoSource,
 ) Server {
-	// Create Mux router
-	muxRouter := mux.NewRouter()
+	mux := http.NewServeMux()
 
-	// Register a health check endpoint at the top level.
-	muxRouter.HandleFunc("/health", func(w http.ResponseWriter, req *http.Request) {
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}).Methods("GET")
+	})
 
-	// create api auth middleware
-	keyMiddleware := &restserver.APIKeyAuthMiddleware{
-		KeyName: serverConfig.APIKeyName,
-		Keys:    serverConfig.APIKeys,
+	auth := func(h http.HandlerFunc) http.Handler {
+		return apiKeyMiddleware(serverConfig.APIKeyName, serverConfig.APIKeys, h)
 	}
-	keyMiddleware.Init()
 
-	router := restserver.NewSwaggerRouter(muxRouter, restserver.SwaggerRouterConfig{
-		Title:           serverConfig.Title,
-		Version:         serverConfig.Version,
-		SwaggerBasePath: serverConfig.SwaggerPath,
-		SecuritySchemes: keyMiddleware.SecuritySchemes(),
-	})
+	fsp := serverConfig.FSPSubpath
+	controller := newFDCProtocolProviderController(rounds, protocolID)
+	mux.Handle(fmt.Sprintf("GET %s/submit1/{votingRoundID}/{submitAddress}", fsp), auth(controller.submit1))
+	mux.Handle(fmt.Sprintf("GET %s/submit2/{votingRoundID}/{submitAddress}", fsp), auth(controller.submit2))
+	mux.Handle(fmt.Sprintf("GET %s/submitSignatures/{votingRoundID}/{submitAddress}", fsp), auth(controller.submitSignatures))
 
-	// create FSP sub router
-	fspSubRouter := router.WithPrefix(serverConfig.FSPSubpath, serverConfig.FSPTitle)
-	// Register routes for FSP
-	registerFDCProviderRoutes(fspSubRouter, protocolID, rounds, []string{serverConfig.APIKeyName})
-	fspSubRouter.AddMiddleware(keyMiddleware.Middleware)
+	da := serverConfig.DAPSubpath
+	daCtrl := NewDAController(rounds)
+	mux.Handle(fmt.Sprintf("GET %s/getRequests/{votingRoundID}", da), auth(daCtrl.getRequests))
+	mux.Handle(fmt.Sprintf("GET %s/getAttestations/{votingRoundID}", da), auth(daCtrl.getAttestations))
 
-	// create DA sub router
-	daSubRouter := router.WithPrefix(serverConfig.DAPSubpath, serverConfig.DATitle)
-	// Register routes for DA
-	registerDARoutes(daSubRouter, rounds, []string{serverConfig.APIKeyName})
-	daSubRouter.AddMiddleware(keyMiddleware.Middleware)
+	ic := &infoController{source: status}
+	mux.Handle("GET /info", auth(ic.info))
 
-	// Register routes
-	router.Finalize()
-
-	// Create CORS handler
-	cors := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-	})
-	corsMuxRouter := cors.Handler(muxRouter)
 	srv := &http.Server{
-		Handler:           corsMuxRouter,
+		Handler:           recoveryMiddleware(corsMiddleware(serverConfig.CORSOrigin, serverConfig.APIKeyName, mux)),
 		Addr:              serverConfig.Addr,
 		ReadHeaderTimeout: 15 * time.Second,
-		// Good practice: enforce timeouts for servers you create -- config?
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
 	return Server{srv: srv}
 }
 
-func (s *Server) Run(ctx context.Context) {
+// Run starts the HTTP server.
+func (s *Server) Run(_ context.Context) {
 	logger.Infof("Starting server on %s", s.srv.Addr)
 
 	err := s.srv.ListenAndServe()
@@ -91,42 +78,85 @@ func (s *Server) Run(ctx context.Context) {
 	}
 }
 
+// Shutdown gracefully shuts down the server.
 func (s *Server) Shutdown() {
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	if err := s.srv.Shutdown(ctx); err != nil {
-		logger.Errorf("server shutdown failed: %v", err)
+		logger.Errorf("Server shutdown failed: %v", err)
 	} else {
 		logger.Info("Server gracefully stopped")
 	}
 }
 
-// registerFDCProviderRoutes registers routes for the FDC protocol provider.
-func registerFDCProviderRoutes(router restserver.Router, protocolID uint8, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
-	// Prepare service controller
-	controller := newFDCProtocolProviderController(rounds, protocolID)
-	paramMap := map[string]string{"votingRoundID": "Voting round ID", "submitAddress": "Submit address"}
-
-	submit1Handler := restserver.GeneralRouteHandler(controller.submit1Controller, http.MethodGet, http.StatusOK, paramMap, nil, nil, payload.SubprotocolResponse{}, securities)
-	router.AddRoute("/submit1/{votingRoundID}/{submitAddress}", submit1Handler, "Submit1")
-
-	submit2Handler := restserver.GeneralRouteHandler(controller.submit2Controller, http.MethodGet, http.StatusOK, paramMap, nil, nil, payload.SubprotocolResponse{}, securities)
-	router.AddRoute("/submit2/{votingRoundID}/{submitAddress}", submit2Handler, "Submit2")
-
-	submitSignaturesHandler := restserver.GeneralRouteHandler(controller.submitSignaturesController, http.MethodGet, http.StatusOK, paramMap, nil, nil, payload.SubprotocolResponse{}, securities)
-	router.AddRoute("/submitSignatures/{votingRoundID}/{submitAddress}", submitSignaturesHandler, "SubmitSignatures")
+func writeJSON(w http.ResponseWriter, v any) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		logger.Errorf("failed to marshal JSON response: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	if _, err = w.Write(data); err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
 }
 
-// registerDARoutes registers routes for DA layer.
-func registerDARoutes(router restserver.Router, rounds *storage.Cyclic[uint32, *round.Round], securities []string) {
-	// Prepare service controller
-	controller := DAController{Rounds: rounds}
-	paramMap := map[string]string{"votingRoundID": "Voting round ID"}
+func apiKeyMiddleware(keyName string, keys []string, next http.Handler) http.Handler {
+	hashedKeys := make([][32]byte, len(keys))
+	for i, k := range keys {
+		hashedKeys[i] = sha256.Sum256([]byte(k))
+	}
 
-	getRequests := restserver.GeneralRouteHandler(controller.getRequestController, http.MethodGet, http.StatusOK, paramMap, nil, nil, RequestsResponse{}, securities)
-	router.AddRoute("/getRequests/{votingRoundID}", getRequests, "GetRequests")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		keyHash := sha256.Sum256([]byte(r.Header.Get(keyName)))
+		valid := 0
+		for _, hk := range hashedKeys {
+			valid |= subtle.ConstantTimeCompare(keyHash[:], hk[:])
+		}
+		if valid != 1 {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
-	getAttestations := restserver.GeneralRouteHandler(controller.getAttestationController, http.MethodGet, http.StatusOK, paramMap, nil, nil, AttestationResponse{}, securities)
-	router.AddRoute("/getAttestations/{votingRoundID}", getAttestations, "GetAttestations")
+// recoveryMiddleware recovers from panics in downstream handlers, logs the panic with a
+// stack trace, and returns a generic 500 to the client instead of dropping the connection.
+// It re-panics on http.ErrAbortHandler so net/http can handle that intentional abort.
+func recoveryMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			rec := recover()
+			if rec == nil {
+				return
+			}
+			if rec == http.ErrAbortHandler {
+				panic(rec)
+			}
+			logger.Errorf("panic serving %s %s: %v\n%s", r.Method, r.URL.Path, rec, debug.Stack())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
+		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func corsMiddleware(origin, keyName string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Frame-Options", "DENY")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, "+keyName)
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

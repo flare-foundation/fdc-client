@@ -111,7 +111,7 @@ func BranchAndBoundVotesDouble(
 	<-firstDone
 	<-secondDone
 
-	// the first solution is optimal, hance never worse then the second solution
+	// the first solution is optimal, hence never worse than the second solution
 	if ignoreSecondSolution {
 		return solutions[0]
 	}

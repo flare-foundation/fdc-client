@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -41,7 +42,7 @@ func SigningPolicyInitializedListener(
 	latestQuery := time.Now()
 	logger.Debugf("Logs length: %d", len(logs))
 	if len(logs) == 0 {
-		logger.Panic("No initial signing policies found:")
+		logger.Panic("No initial signing policies found")
 	}
 
 	// signingPolicyStorage expects policies in increasing order
@@ -114,7 +115,12 @@ func spiTargetedListener(
 			logger.Errorf("querying next SPI event: %v", err)
 			continue
 		}
-		votersDataChan <- logsWithSubmitAddresses
+		select {
+		case votersDataChan <- logsWithSubmitAddresses:
+		case <-ctx.Done():
+			logger.Infof("spiTargetedListener exiting: %v", ctx.Err())
+			return
+		}
 
 		latestQuery = time.Now()
 		lastInitializedRewardEpochID++
@@ -133,6 +139,7 @@ func queryNextSPI(
 	error,
 ) {
 	ticker := time.NewTicker(time.Duration(timing.Chain.CollectDurationSec-1) * time.Second) // ticker that is guaranteed to tick at least once per SystemVotingRound
+	defer ticker.Stop()
 
 	for {
 		now := time.Now()
@@ -148,7 +155,7 @@ func queryNextSPI(
 			ctx, db, params,
 		)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetching signing policy logs: %w", err)
 		}
 
 		if len(logs) > 0 {
@@ -160,7 +167,7 @@ func queryNextSPI(
 			for i := range logs {
 				votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[i])
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("adding submit addresses for log %d: %w", i, err)
 				}
 				if votersData.Policy.RewardEpochId.Uint64() > latestRewardEpoch {
 					votersDataArray = append(votersDataArray, votersData)
@@ -168,7 +175,6 @@ func queryNextSPI(
 				}
 			}
 			if len(votersDataArray) > 0 {
-				ticker.Stop()
 				return votersDataArray, nil
 			}
 		}

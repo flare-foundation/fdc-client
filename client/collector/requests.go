@@ -22,6 +22,7 @@ func AttestationRequestListener(
 	logChan chan<- []database.Log,
 ) {
 	trigger := time.NewTicker(listenerInterval)
+	defer trigger.Stop()
 
 	// initial query
 	_, startTimestamp, err := timing.LastCollectPhaseStart(uint64(time.Now().Unix()))
@@ -47,7 +48,7 @@ func AttestationRequestListener(
 		ctx, db, params,
 	)
 	if err != nil {
-		logger.Panic("fetch initial logs")
+		logger.Panicf("fetch initial logs: %v", err)
 	}
 
 	// add requests to the channel

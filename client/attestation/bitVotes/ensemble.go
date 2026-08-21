@@ -1,7 +1,9 @@
 package bitvotes
 
 import (
+	"errors"
 	"fmt"
+	"math"
 	"math/big"
 )
 
@@ -62,10 +64,14 @@ func ensemble(allBitVotes []*WeightedBitVote, fees []*big.Int, totalWeight uint1
 }
 
 func EnsembleConsensusBitVote(allBitVotes []*WeightedBitVote, fees []*big.Int, totalWeight uint16, maxOperations int) (BitVote, error) {
+	if len(fees) > math.MaxUint16 {
+		return BitVote{}, errors.New("more than 65535 attestations")
+	}
+
 	filterResults, filterSolution, err := ensemble(allBitVotes, fees, totalWeight, maxOperations)
 
 	if err != nil {
-		return BitVote{}, fmt.Errorf("consensus bitVote: %s", err)
+		return BitVote{}, fmt.Errorf("consensus bitVote: %w", err)
 	}
 
 	return AssembleSolution(filterResults, filterSolution, uint16(len(fees))), nil

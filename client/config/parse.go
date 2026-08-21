@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 )
 
 // ParseAttestationTypes parses AttestationTypesUnparsed as read from toml file into AttestationTypes.
@@ -14,12 +15,12 @@ func ParseAttestationTypes(attTypesConfigUnparsed AttestationTypesUnparsed) (Att
 	for attName := range attTypesConfigUnparsed {
 		attType, err := StringToByte32(attName)
 		if err != nil {
-			return nil, fmt.Errorf("reading type %s", err)
+			return nil, fmt.Errorf("reading type: %w", err)
 		}
 
 		attTypeConfig, err := ParseAttestationType(attTypesConfigUnparsed[attName])
 		if err != nil {
-			return nil, fmt.Errorf("parsing type %s: %s", attName, err)
+			return nil, fmt.Errorf("parsing type %s: %w", attName, err)
 		}
 
 		attTypesConfig[attType] = attTypeConfig
@@ -42,20 +43,18 @@ func ArgumentsFromABI(abiBytes []byte) (abi.Arguments, error) {
 
 // parseSource takes sourceBig and converts LUTLimit from big.int to uint64.
 func parseSource(sourceConfigBig sourceBig) (Source, error) {
-	if !sourceConfigBig.LUTLimit.IsUint64() {
-		return Source{
-				URL:       sourceConfigBig.URL,
-				APIKey:    sourceConfigBig.APIKey,
-				LUTLimit:  0,
-				QueueName: sourceConfigBig.QueueName,
-			},
-			errors.New("lutLimit does not fit in uint64")
+	if sourceConfigBig.LUTLimit == nil {
+		return Source{}, errors.New("lutLimit is required")
+	}
+	lutLimit, err := convert.BigToUint64Safe(sourceConfigBig.LUTLimit)
+	if err != nil {
+		return Source{}, fmt.Errorf("lutLimit: %w", err)
 	}
 
 	return Source{
 			URL:       sourceConfigBig.URL,
 			APIKey:    sourceConfigBig.APIKey,
-			LUTLimit:  sourceConfigBig.LUTLimit.Uint64(),
+			LUTLimit:  lutLimit,
 			QueueName: sourceConfigBig.QueueName,
 		},
 		nil
@@ -63,19 +62,19 @@ func parseSource(sourceConfigBig sourceBig) (Source, error) {
 
 // ParseAttestationType parses attestation type configurations.
 func ParseAttestationType(attTypeCfgUnparsed AttestationTypeUnparsed) (AttestationType, error) {
-	responseArguments, responseAbiString, err := ReadABI(attTypeCfgUnparsed.ABIPath)
+	responseArguments, responseABIString, err := ReadABI(attTypeCfgUnparsed.ABIPath)
 	if err != nil {
-		return AttestationType{}, fmt.Errorf("getting abi %s", err)
+		return AttestationType{}, fmt.Errorf("getting abi: %w", err)
 	}
 
 	sourcesCfg, err := parseSources(attTypeCfgUnparsed.Sources)
 	if err != nil {
-		return AttestationType{}, fmt.Errorf("parsing: %s", err)
+		return AttestationType{}, fmt.Errorf("parsing: %w", err)
 	}
 
 	return AttestationType{
 			ResponseArguments: responseArguments,
-			ResponseABIString: responseAbiString,
+			ResponseABIString: responseABIString,
 			SourcesConfig:     sourcesCfg,
 		},
 		nil
@@ -87,12 +86,12 @@ func parseSources(sourcesConfigUnparsed map[string]sourceBig) (map[[32]byte]Sour
 	for sourceName := range sourcesConfigUnparsed {
 		source, err := StringToByte32(sourceName)
 		if err != nil {
-			return nil, fmt.Errorf("reading source %s", err)
+			return nil, fmt.Errorf("reading source: %w", err)
 		}
 
 		sourceConfig, err := parseSource(sourcesConfigUnparsed[sourceName])
 		if err != nil {
-			return nil, fmt.Errorf("parsing source config %s", err)
+			return nil, fmt.Errorf("parsing source config: %w", err)
 		}
 
 		sourcesConfig[source] = sourceConfig
@@ -106,7 +105,7 @@ func parseSources(sourcesConfigUnparsed map[string]sourceBig) (map[[32]byte]Sour
 func StringToByte32(str string) ([32]byte, error) {
 	var strBytes [32]byte
 	if len(str) > 32 {
-		return strBytes, fmt.Errorf("string %s to long", str)
+		return strBytes, fmt.Errorf("string %s too long", str)
 	}
 
 	copy(strBytes[:], []byte(str))

@@ -4,6 +4,10 @@ chain = "coston"
 
 protocol_id = 200
 
+[rounds]
+# most-recent rounds kept in memory; minimum 3, omit for the default of 80
+buffer_size = 80
+
 [db]
 host = "localhost"
 port = 3306
@@ -23,7 +27,8 @@ fsp_sub_router_path = "/fsp"
 da_sub_router_title = "DA endpoints"
 da_sub_router_path = "/da"
 version = "0.0.0"
-swagger_path = "/api-doc"
+# allowed CORS origin; empty denies all cross-origin requests
+cors_origin = ""
 
 [logger]
 file = ""
@@ -207,43 +212,37 @@ queue = "xrp"
 
 # Queues
 [queues.btc]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.doge]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.xrp]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.eth]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.sgb]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"
 
 [queues.flr]
-size = 10
-max_dequeues_per_second = 0
-max_workers = 0
+max_dequeues_per_second = 200
+max_workers = 20
 max_attempts = 3
 time_off = "2s"

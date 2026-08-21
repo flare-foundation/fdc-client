@@ -3,8 +3,9 @@ package bitvotes
 import (
 	"math/big"
 	"slices"
+	"strings"
 
-	"github.com/flare-foundation/fdc-client/client/utils"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 )
 
 type FilterResults struct {
@@ -103,6 +104,7 @@ votes:
 		} else if allZeros {
 			somethingChanged = true
 			fr.AlwaysOutVotes = append(fr.AlwaysOutVotes, i)
+			fr.RemainingWeight -= bitVotes[i].Weight
 
 			delete(fr.RemainingVotes, i)
 		}
@@ -173,14 +175,14 @@ func (f *AggregatedBit) Value(totalWeight uint16, cache bool) Value {
 func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *FilterResults) []*AggregatedBit {
 	aggregator := map[string]*AggregatedBit{}
 
-	remainingBitsSorted := utils.Keys(filterResults.RemainingBits)
+	remainingBitsSorted := convert.MapToKeySlice(filterResults.RemainingBits)
 	slices.Sort(remainingBitsSorted)
 
-	remainingVotesSorted := utils.Keys(filterResults.RemainingVotes)
+	remainingVotesSorted := convert.MapToKeySlice(filterResults.RemainingVotes)
 	slices.Sort(remainingVotesSorted)
 
 	for _, i := range remainingBitsSorted {
-		identifier := ""
+		var idBuilder strings.Builder
 		support := filterResults.GuaranteedWeight
 
 		for _, j := range remainingVotesSorted {
@@ -188,11 +190,13 @@ func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *
 
 			if bit == 1 {
 				support += bitVotes[j].Weight
-				identifier += "1"
+				idBuilder.WriteString("1")
 			} else {
-				identifier += "0"
+				idBuilder.WriteString("0")
 			}
 		}
+
+		identifier := idBuilder.String()
 
 		aggFee, exists := aggregator[identifier]
 		if !exists {
@@ -209,7 +213,7 @@ func AggregateBits(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *
 		}
 	}
 
-	return utils.Values(aggregator)
+	return convert.MapToValueSlice(aggregator)
 }
 
 type AggregatedVote struct {
@@ -222,26 +226,29 @@ type AggregatedVote struct {
 func AggregateVotes(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults *FilterResults) []*AggregatedVote {
 	aggregator := map[string]*AggregatedVote{}
 
-	remainingBitsSorted := utils.Keys(filterResults.RemainingBits)
+	remainingBitsSorted := convert.MapToKeySlice(filterResults.RemainingBits)
 	slices.Sort(remainingBitsSorted)
 
-	remainingVotesSorted := utils.Keys(filterResults.RemainingVotes)
+	remainingVotesSorted := convert.MapToKeySlice(filterResults.RemainingVotes)
 	slices.Sort(remainingVotesSorted)
 
 	for _, i := range remainingVotesSorted {
 		feesVote := big.NewInt(0).Set(filterResults.GuaranteedFees)
-		identifier := ""
+
+		var idBuilder strings.Builder
 
 		for _, j := range remainingBitsSorted {
 			bit := bitVotes[i].BitVote.BitVector.Bit(j)
 
 			if bit == 1 {
 				feesVote.Add(feesVote, fees[j])
-				identifier += "1"
+				idBuilder.WriteString("1")
 			} else {
-				identifier += "0"
+				idBuilder.WriteString("0")
 			}
 		}
+
+		identifier := idBuilder.String()
 
 		aggVote, exists := aggregator[identifier]
 
@@ -260,7 +267,7 @@ func AggregateVotes(bitVotes []*WeightedBitVote, fees []*big.Int, filterResults 
 		}
 	}
 
-	return utils.Values(aggregator)
+	return convert.MapToValueSlice(aggregator)
 }
 
 func FilterAndAggregate(bitVotes []*WeightedBitVote, fees []*big.Int, totalWeight uint16) ([]*AggregatedVote, []*AggregatedBit, *FilterResults) {

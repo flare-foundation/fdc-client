@@ -4,28 +4,26 @@ import (
 	"context"
 	"encoding/binary"
 	"math/big"
+	"strconv"
 	"sync"
+	"testing"
+	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/payload"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
 	"github.com/flare-foundation/go-flare-common/pkg/voters"
-
-	"strconv"
-	"testing"
-	"time"
+	"github.com/stretchr/testify/require"
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 	"github.com/flare-foundation/fdc-client/client/config"
 	"github.com/flare-foundation/fdc-client/client/round"
 	"github.com/flare-foundation/fdc-client/client/shared"
 	"github.com/flare-foundation/fdc-client/tests/mocks"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/require"
 )
 
-const USER_FILE = "../../tests/configs/testConfig.toml" // relative to test
+const userFile = "../../tests/configs/testConfig.toml" // relative to test
 
 var policyLog = database.Log{
 	Address:         "32D46A1260BB2D8C9d5Ab1C9bBd7FF7D7CfaabCC",
@@ -104,23 +102,13 @@ var bitVoteMessage = payload.Message{
 	Payload:          []byte{0, 3, 5},
 }
 
-// setVerifierURL points every configured source at url, overriding the fixed port in the test config.
-func setVerifierURL(types config.AttestationTypes, url string) {
-	for _, typeConfig := range types {
-		for source, sourceConfig := range typeConfig.SourcesConfig {
-			sourceConfig.URL = url
-			typeConfig.SourcesConfig[source] = sourceConfig
-		}
-	}
-}
-
 func TestManagerMethods(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
+	cfg, err := config.ReadUserRaw(userFile)
 	require.NoError(t, err)
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(config.DefaultRoundBufferSize)
 	mngr, err := New(&cfg, attestationTypeConfig, sharedDataPipes)
 	require.NoError(t, err)
 
@@ -159,17 +147,27 @@ func TestManagerMethods(t *testing.T) {
 	require.True(t, ok)
 }
 
+// setVerifierURL points every configured source at url, overriding the fixed port in the test config.
+func setVerifierURL(types config.AttestationTypes, url string) {
+	for _, typeConfig := range types {
+		for source, sourceConfig := range typeConfig.SourcesConfig {
+			sourceConfig.URL = url
+			typeConfig.SourcesConfig[source] = sourceConfig
+		}
+	}
+}
+
 func TestManager(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
+	cfg, err := config.ReadUserRaw(userFile)
 	require.NoError(t, err)
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	// run mocked verifier for test
+	// must precede New, which snapshots the source configs
 	setVerifierURL(attestationTypeConfig, mocks.MockVerifierForTests(t, testResponse, requestLog))
 
 	// initialize
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(config.DefaultRoundBufferSize)
 	mngr, err := New(&cfg, attestationTypeConfig, sharedDataPipes)
 	require.NoError(t, err)
 
@@ -193,13 +191,19 @@ func TestManager(t *testing.T) {
 
 	// get signing policy
 	sharedDataPipes.Voters <- []shared.VotersData{votersData}
-	time.Sleep(1 * time.Second)
-	policy, _ := mngr.signingPolicyStorage.ForVotingRound(664111)
 
-	time.Sleep(1 * time.Second)
+	// wait for the manager to drain the policy — a bare sleep leaves signingPolicy nil on a
+	// slow drain, and the VoterDataMap range below then panics and kills the test binary
+	require.Eventually(t, func() bool {
+		_, ok := mngr.signingPolicyStorage.ForVotingRound(664111)
+		return ok
+	}, 5*time.Second, 50*time.Millisecond)
+
+	signingPolicy, ok := mngr.signingPolicyStorage.ForVotingRound(664111)
+	require.True(t, ok)
 
 	// send attestation request
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		currentReqestLog := requestLog
 		currentReqestLog.BlockNumber += uint64(i)
 		currentReqestLog.Data = currentReqestLog.Data[:len(currentReqestLog.Data)-1] + strconv.Itoa(i)
@@ -213,37 +217,43 @@ func TestManager(t *testing.T) {
 		if !ok {
 			return false
 		}
-
-		atts := r.AttestationsSnapshot()
+		r.RLock()
+		atts := append([]*attestation.Attestation(nil), r.Attestations...)
+		r.RUnlock()
 		if len(atts) != 3 {
 			return false
 		}
-
-		for i := range atts {
-			atts[i].RLock()
-			status := atts[i].Status
-			atts[i].RUnlock()
-
+		for _, a := range atts {
+			a.RLock()
+			status := a.Status
+			a.RUnlock()
 			if status != attestation.Success {
 				return false
 			}
 		}
-
 		return true
 	}, 5*time.Second, 50*time.Millisecond)
 
-	messages := make([]payload.Message, 0, len(policy.Voters.VoterDataMap))
+	messages := make([]payload.Message, 0, len(signingPolicy.Voters.VoterDataMap))
 
-	for address := range policy.Voters.VoterDataMap {
+	for address := range signingPolicy.Voters.VoterDataMap {
 		currentLog := bitVoteMessage
 		currentLog.From = address
 		messages = append(messages, currentLog)
 	}
-	sharedDataPipes.BitVotes <- payload.Round{ID: 664111, Messages: messages}
+	roundPayload := payload.Round{ID: 664111, Messages: messages}
+	sharedDataPipes.BitVotes <- roundPayload
 
 	require.Eventually(t, func() bool {
-		bitVote, exists, computed := r.GetConsensusBitVote()
-		return computed && exists && bitVote.BitVector.Int64() == 5
+		r.RLock()
+		defer r.RUnlock()
+		if !r.ConsensusCalculationFinished {
+			return false
+		}
+		if r.ConsensusBitVote.BitVector == nil {
+			return false
+		}
+		return r.ConsensusBitVote.BitVector.Int64() == 5
 	}, 5*time.Second, 50*time.Millisecond)
 
 	cancel()
@@ -253,20 +263,20 @@ func TestManager(t *testing.T) {
 // TestRetryUnsuccessfulChosenConcurrent covers the retry walk racing the in-place sort that the
 // server's submit2 path triggers. TestManager cannot: it never calls submit2.
 func TestRetryUnsuccessfulChosenConcurrent(t *testing.T) {
-	cfg, err := config.ReadUserRaw(USER_FILE)
+	cfg, err := config.ReadUserRaw(userFile)
 	require.NoError(t, err)
 
 	attestationTypeConfig, err := config.ParseAttestationTypes(cfg.AttestationTypeConfig)
 	require.NoError(t, err)
 
-	mngr, err := New(&cfg, attestationTypeConfig, shared.NewDataPipes())
+	mngr, err := New(&cfg, attestationTypeConfig, shared.NewDataPipes(config.DefaultRoundBufferSize))
 	require.NoError(t, err)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context() // cancelled when the test ends, stopping the queue goroutines
 
 	// enqueue side only: without dequeue workers nothing reaches a verifier
 	var queueName string
+
 	for name := range mngr.queues {
 		mngr.queues[name].InitiateAndRun(ctx)
 		queueName = name
@@ -274,7 +284,16 @@ func TestRetryUnsuccessfulChosenConcurrent(t *testing.T) {
 
 	require.NotEmpty(t, queueName)
 
-	r := round.New(664111, voters.NewSet(nil, nil, nil))
+	// NewSet rejects zero total weight, so seed one dummy voter
+	voter := common.HexToAddress("0x0000000000000000000000000000000000000001")
+	voterSet, err := voters.NewSet(
+		[]common.Address{voter},
+		[]uint16{1},
+		map[common.Address]common.Address{voter: voter},
+	)
+	require.NoError(t, err)
+
+	r := round.New(664111, voterSet)
 
 	const attestations = 50
 
@@ -295,18 +314,14 @@ func TestRetryUnsuccessfulChosenConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for _, fn := range []func(){
-		func() { _, _ = mngr.retryUnsuccessfulChosen(r) },
+		func() { _, _ = mngr.retryUnsuccessfulChosen(ctx, r) },
 		func() { _, _ = r.BitVote() }, // sorts Attestations in place
 	} {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			for range 100 {
 				fn()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

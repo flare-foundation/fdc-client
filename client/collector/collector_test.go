@@ -3,8 +3,6 @@ package collector_test
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
-	"sync/atomic"
 
 	"testing"
 	"time"
@@ -37,18 +35,10 @@ var (
 	funcSel            = [4]byte{1, 2, 3, 4}
 )
 
-var dbSeq atomic.Uint64
-
-// InMemoryDB opens an empty in-memory database.
-//
-// The name is suffixed per call: a shared-cache in-memory database lives as long as the process
-// holds a connection, so reusing a name leaks rows into the next -count run.
-func InMemoryDB(t *testing.T, name string) *gorm.DB {
+func InMemoryDB(t *testing.T, _ string) *gorm.DB {
 	t.Helper()
 
-	dsn := fmt.Sprintf("file:%s_%d?mode=memory&cache=shared", name, dbSeq.Add(1))
-
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
 		// Logger: logger.Default.LogMode(logger.Info),
 	})
 
@@ -56,14 +46,11 @@ func InMemoryDB(t *testing.T, name string) *gorm.DB {
 		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		sqlDB, err := db.DB()
-		if err != nil {
-			return
-		}
-
-		_ = sqlDB.Close() // the database is freed with its last connection
-	})
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB.SetMaxOpenConns(1)
 
 	return db
 }
@@ -119,10 +106,10 @@ func TestBitVoteListener(t *testing.T) {
 	bitVotesChan := make(chan payload.Round, 2)
 
 	pyld, err := hex.DecodeString("0100050b")
-
 	require.NoError(t, err)
 
-	msg := payload.BuildMessage(200, 1, pyld)
+	msg, err := payload.BuildMessage(200, 1, pyld)
+	require.NoError(t, err)
 
 	input := hex.EncodeToString(funcSel[:]) + msg[2:]
 

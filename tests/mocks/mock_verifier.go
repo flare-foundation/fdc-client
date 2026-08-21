@@ -16,7 +16,6 @@ import (
 
 	"github.com/flare-foundation/fdc-client/client/attestation"
 
-	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,9 +60,9 @@ func MockResponseForTest(t *testing.T, writer http.ResponseWriter, request *http
 }
 
 func MockVerifier(port int, response string) {
-	r := mux.NewRouter()
+	mux := http.NewServeMux()
 
-	r.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+	mux.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		MockResponse(writer, request, response)
 	})
 
@@ -71,7 +70,7 @@ func MockVerifier(port int, response string) {
 		Addr:         ":" + strconv.Itoa(port),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
-		Handler:      r,
+		Handler:      mux,
 	}
 
 	fmt.Println("Mock verifier starting")

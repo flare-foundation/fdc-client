@@ -18,7 +18,7 @@ func TestBranchAndBoundRandom(t *testing.T) {
 	prob := 0.8
 
 	totalWeight := uint16(0)
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		bitVote := randomBitVoteAggregated(numAttestations, prob, j)
 		aggBitVotes[j] = bitVote
 
@@ -26,7 +26,7 @@ func TestBranchAndBoundRandom(t *testing.T) {
 	}
 
 	fees := make([]*bitvotes.AggregatedBit, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fee := bitvotes.AggregatedBit{Fee: big.NewInt(1), Indexes: []int{j}}
 
 		fees[j] = &fee
@@ -62,7 +62,7 @@ func TestBranchAndBound65(t *testing.T) {
 	weightedBitVotes := make([]*bitvotes.WeightedBitVote, numVoters)
 	totalWeight := uint16(0)
 
-	for j := 0; j < numVoters; j++ {
+	for j := range numVoters {
 		var bitVote *bitvotes.WeightedBitVote
 		if 0.65*float64(numVoters) > float64(j) {
 			bitVote = setBitVoteFromRules(numAttestations, []int{2, 3})
@@ -75,7 +75,7 @@ func TestBranchAndBound65(t *testing.T) {
 	}
 
 	fees := make([]*big.Int, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fees[j] = big.NewInt(1)
 	}
 
@@ -121,7 +121,7 @@ func TestBranchAndBoundFix(t *testing.T) {
 	}
 
 	fees := make([]*bitvotes.AggregatedBit, numAttestations)
-	for j := 0; j < numAttestations; j++ {
+	for j := range numAttestations {
 		fee := bitvotes.AggregatedBit{Fee: big.NewInt(1), Indexes: []int{j}, Support: 1}
 
 		fees[j] = &fee

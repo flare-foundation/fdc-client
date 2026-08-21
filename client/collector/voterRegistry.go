@@ -3,19 +3,18 @@ package collector
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/flare-foundation/go-flare-common/pkg/convert"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
+	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/collector/registry"
 	"github.com/flare-foundation/fdc-client/client/shared"
-
-	"fmt"
-
-	"github.com/ethereum/go-ethereum/common"
-	"gorm.io/gorm"
 )
 
 type VoterRegisteredParams struct {
@@ -54,7 +53,7 @@ func BuildSubmitToSigningPolicyAddress(registryEvents []database.Log) (map[commo
 	for i := range registryEvents {
 		event, err := registry.ParseVoterRegisteredEvent(registryEvents[i])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parsing voter registered event at index %d: %w", i, err)
 		}
 
 		submitToSigning[event.SubmitAddress] = event.SigningPolicyAddress
@@ -83,15 +82,13 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, signingPolicyLog database.Log) (shared.VotersData, error) {
 	data, err := policy.ParseSigningPolicyInitializedEvent(signingPolicyLog)
 	if err != nil {
-		return shared.VotersData{}, err
+		return shared.VotersData{}, fmt.Errorf("parsing signing policy initialized event: %w", err)
 	}
 
-	ok := data.RewardEpochId.IsUint64()
-	if !ok {
-		return shared.VotersData{}, fmt.Errorf("reward epoch %v too high", data.RewardEpochId)
+	rewardEpochID, err := convert.BigToUint64Safe(data.RewardEpochId)
+	if err != nil {
+		return shared.VotersData{}, fmt.Errorf("reward epoch %v: %w", data.RewardEpochId, err)
 	}
-
-	rewardEpochID := data.RewardEpochId.Uint64()
 
 	submitToSigning, err := SubmitToSigningPolicyAddress(ctx, db, registryContractAddress, rewardEpochID)
 	if err != nil {

@@ -26,7 +26,12 @@ func (c *FDCProtocolProviderController) submit2Service(roundID uint32, _ string)
 		return "", false, err
 	}
 
-	payloadMsg := payload.BuildMessage(c.protocolID, roundID, bv)
+	payloadMsg, err := payload.BuildMessage(c.protocolID, roundID, bv)
+	if err != nil {
+		logger.Errorf("submit2: building message %s", err)
+
+		return "", false, err
+	}
 	logger.Infof("submit2: for round %d: %s", roundID, payloadMsg)
 
 	return payloadMsg, true, nil
@@ -47,7 +52,7 @@ func (c *FDCProtocolProviderController) submitSignaturesService(roundID uint32, 
 		return payload.SubprotocolResponse{Status: payload.Retry}
 	}
 	if !exists {
-		logger.Infof("submitSignatures: consensus bitVote for round %d not available: %s", roundID)
+		logger.Infof("submitSignatures: consensus bitVote for round %d not available", roundID)
 		return payload.SubprotocolResponse{Status: payload.Empty}
 	}
 

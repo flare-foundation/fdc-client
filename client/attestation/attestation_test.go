@@ -107,9 +107,9 @@ func TestHandleDoesNotDowngradeConfirmedAttestation(t *testing.T) {
 }
 
 func setAttestations(n int, rules []int) []*attestation.Attestation {
-	atts := []*attestation.Attestation{}
+	atts := make([]*attestation.Attestation, 0, n)
 
-	for j := 0; j < n; j++ {
+	for j := range n {
 		att := new(attestation.Attestation)
 		att.Fee = big.NewInt(10)
 		att.Status = attestation.ProcessError

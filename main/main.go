@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
 
@@ -22,6 +21,7 @@ const (
 	systemDirectory string = "configs/systemConfigs" // relative to project root
 )
 
+// CfgFlag is the path to the user toml configuration file.
 var CfgFlag = flag.String("config", "configs/userConfig.toml", "Configuration file (toml format)")
 
 func main() {
@@ -31,6 +31,14 @@ func main() {
 		logger.Panicf("cannot read configs: %s", err)
 	}
 	logger.Set(userConfigRaw.Logging)
+
+	configWarnings, err := userConfigRaw.Validate()
+	for _, w := range configWarnings {
+		logger.Warn(w)
+	}
+	if err != nil {
+		logger.Panicf("invalid config: %s", err)
+	}
 
 	err = timing.Set(systemConfig.Timing)
 	if err != nil {
@@ -46,7 +54,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Prepare shared data connections that collector, manager and server will use
-	sharedDataPipes := shared.NewDataPipes()
+	sharedDataPipes := shared.NewDataPipes(userConfigRaw.Rounds.BufferSize)
 
 	// Start attestation client collector
 	col := collector.New(userConfigRaw, systemConfig, sharedDataPipes)
@@ -61,7 +69,7 @@ func main() {
 	go mngr.Run(ctx, cancel)
 
 	// Run attestation client server
-	srv := server.New(&sharedDataPipes.Rounds, userConfigRaw.ProtocolID, userConfigRaw.RestServer)
+	srv := server.New(sharedDataPipes.Rounds, userConfigRaw.ProtocolID, userConfigRaw.RestServer, sharedDataPipes.Status)
 	go srv.Run(ctx)
 	logger.Info("Running server")
 
@@ -70,8 +78,7 @@ func main() {
 	// Block until a termination signal is received.
 	select {
 	case <-cancelChan:
-		logger.Info("Received an interrupt signal, shutting down after 2 minutes")
-		time.Sleep(2 * time.Minute)
+		logger.Info("Received an interrupt signal, shutting down...")
 	case <-ctx.Done():
 		logger.Info("Context cancelled, shutting down...")
 	}

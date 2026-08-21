@@ -116,7 +116,7 @@ func BranchAndBoundBitsDouble(bitVotes []*AggregatedVote, bits []*AggregatedBit,
 	bitsDscVal := sortFees(bits, cmpValDsc(absoluteTotalWeight))
 
 	go func() {
-		solution := BranchAndBoundBits(bitVotes, bitsDscVal, assumedWeight, weightVoted, absoluteTotalWeight, assumedFees, maxOperations, initialBound, false)
+		solution := BranchAndBoundBits(bitVotes, bitsDscVal, assumedWeight, weightVoted, absoluteTotalWeight, assumedFees, maxOperations, initialBound.Copy(), false)
 		solutions[0] = solution
 
 		if solution.Optimal {
@@ -129,16 +129,16 @@ func BranchAndBoundBitsDouble(bitVotes []*AggregatedVote, bits []*AggregatedBit,
 	}()
 
 	go func() {
-		solution := BranchAndBoundBits(bitVotes, bitsAscVal, assumedWeight, weightVoted, absoluteTotalWeight, assumedFees, maxOperations, initialBound, true)
+		solution := BranchAndBoundBits(bitVotes, bitsAscVal, assumedWeight, weightVoted, absoluteTotalWeight, assumedFees, maxOperations, initialBound.Copy(), true)
 
-		solutions[1] = solution // no problem in two processes writing to the same place, since in that case the solution not used
+		solutions[1] = solution
 		secondDone <- true
 	}()
 
 	<-firstDone
 	<-secondDone
 
-	// the first solution is optimal, hance never worse then the second solution
+	// the first solution is optimal, hence never worse than the second solution
 	if ignoreSecondSolution {
 		return solutions[0]
 	}
