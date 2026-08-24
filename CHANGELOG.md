@@ -8,6 +8,8 @@
 Signing policies are read from `relay_contract` up to and including `starting_reward_epoch` and from `relay_cutover.address` afterwards; events from the contract that is not authoritative for their reward epoch are ignored and logged.
 Unset, the client reads signing policies exactly as before.
 Setting only one of the two keys is a fatal configuration error.
+The resolved schedule is logged at startup, and both contracts stay queried after the switch, so a `Relay` emitting outside its authority is always warned about.
+While the signing policy of a reward epoch is missing more than ten voting rounds past the epoch's expected start, the client logs an error and then a warning per polling tick, since rounds are meanwhile decided with the previous voter set.
 - API-key-protected `GET /info` endpoint returning client status: stored-round range, current epoch, round buffer size, signing-policy summaries, and server time.
 - `cors_origin` REST-server config option (and `REST_CORS_ORIGIN` env var) to set the allowed CORS origin; empty by default.
 - Environment-variable overrides for REST-server settings: `REST_ADDR`, `REST_API_KEY_NAME`, and `REST_API_KEYS` (comma-separated).

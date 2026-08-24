@@ -4,17 +4,23 @@ import (
 	"context"
 	"encoding/hex"
 	"math/big"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
+	"github.com/flare-foundation/go-flare-common/pkg/logger"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/config"
+	"github.com/flare-foundation/fdc-client/client/timing"
 )
 
 var (
@@ -59,24 +65,16 @@ func TestAddresses(t *testing.T) {
 	require.Equal(t, []common.Address{oldRelayAddr, newRelayAddr}, scheduledSource().addresses())
 }
 
-func TestAddressesAfter(t *testing.T) {
-	tests := []struct {
-		name          string
-		source        RelaySource
-		rewardEpochID uint64
-		expected      []common.Address
-	}{
-		{"no cutover", unscheduledSource(), breakingEpoch, []common.Address{oldRelayAddr}},
-		{"window can span the switch", scheduledSource(), breakingEpoch - 1, []common.Address{oldRelayAddr, newRelayAddr}},
-		{"switch passed", scheduledSource(), breakingEpoch, []common.Address{newRelayAddr}},
-		{"well past the switch", scheduledSource(), breakingEpoch + 5, []common.Address{newRelayAddr}},
-	}
+func TestSchedule(t *testing.T) {
+	unscheduled := unscheduledSource().schedule()
+	require.Contains(t, unscheduled, "no relay cutover scheduled")
+	require.Contains(t, unscheduled, oldRelayAddr.String())
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.expected, test.source.addressesAfter(test.rewardEpochID))
-		})
-	}
+	scheduled := scheduledSource().schedule()
+	require.Contains(t, scheduled, oldRelayAddr.String())
+	require.Contains(t, scheduled, newRelayAddr.String())
+	require.Contains(t, scheduled, "up to and including reward epoch 100")
+	require.Contains(t, scheduled, "from reward epoch 101 on")
 }
 
 func TestAcceptPolicies(t *testing.T) {
@@ -171,7 +169,8 @@ func TestFetchPoliciesAfter(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []uint64{breakingEpoch, breakingEpoch + 1}, epochsOf(policies))
 
-	// past the switch only the new Relay is queried, so the old one's epochs cannot leak in
+	// past the switch the old Relay is still queried: its epoch-100 event passes the authority
+	// filter (addressFor(100) is the old Relay) and is excluded by the epoch filter (> 100)
 	policies, err = scheduledSource().fetchPoliciesAfter(ctx, db, breakingEpoch, 0, breakingEpoch+10)
 	require.NoError(t, err)
 	require.Equal(t, []uint64{breakingEpoch + 1}, epochsOf(policies))
@@ -248,4 +247,100 @@ func spiLog(t *testing.T, address common.Address, rewardEpochID uint64, timestam
 		Topic3:    database.NullTopic,
 		Timestamp: timestamp,
 	}
+}
+
+// captureLogs redirects the global logger to a file and returns a reader for its content.
+func captureLogs(t *testing.T, level string) func() string {
+	t.Helper()
+
+	file := filepath.Join(t.TempDir(), "log")
+
+	logger.Set(logger.Config{Level: level, File: file, Console: false})
+	t.Cleanup(func() {
+		logger.Set(logger.DefaultConfig())
+	})
+
+	return func() string {
+		logger.SyncFileLogger()
+		content, _ := os.ReadFile(file) // absent file (nothing logged yet) reads as empty
+
+		return string(content)
+	}
+}
+
+func TestFetchPoliciesAfterKeepsObservingRetiredRelay(t *testing.T) {
+	ctx := context.Background()
+
+	// the old Relay emitting past the switch is fetched and dropped with a warning,
+	// not silently left unqueried — the diagnostic for a mis-scheduled cutover
+	db := policyDB(t, spiLog(t, oldRelayAddr, breakingEpoch+1, breakingEpoch+1))
+
+	read := captureLogs(t, "WARN")
+
+	policies, err := scheduledSource().fetchPoliciesAfter(ctx, db, breakingEpoch, 0, breakingEpoch+10)
+	require.NoError(t, err)
+	require.Empty(t, policies)
+	require.Contains(t, read(), "ignoring signing policy for reward epoch 101")
+}
+
+func TestQueryNextSPIAlarmsOnOverduePolicy(t *testing.T) {
+	// shrink the ticker so two iterations fit in the test
+	saved := timing.Chain.CollectDurationSec
+	timing.Chain.CollectDurationSec = 2
+	t.Cleanup(func() { timing.Chain.CollectDurationSec = saved })
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	db := policyDB(t) // no logs: the next policy is missing while its epoch started long ago
+
+	read := captureLogs(t, "WARN")
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := queryNextSPI(ctx, db, scheduledSource(), time.Unix(0, 0), breakingEpoch)
+		done <- err
+	}()
+
+	overdueLines := func() []string {
+		var lines []string
+		for l := range strings.SplitSeq(read(), "\n") {
+			if strings.Contains(l, "overdue") {
+				lines = append(lines, l)
+			}
+		}
+
+		return lines
+	}
+
+	require.Eventually(t, func() bool { return len(overdueLines()) >= 2 }, 10*time.Second, 20*time.Millisecond)
+
+	cancel()
+	require.ErrorIs(t, <-done, context.Canceled) // join before Cleanup restores timing.Chain
+
+	// one stacktraced Error on stall entry, Warn on every later tick
+	lines := overdueLines()
+	errors, warns := 0, 0
+	for _, l := range lines {
+		switch {
+		case strings.Contains(l, "ERROR"):
+			errors++
+		case strings.Contains(l, "WARN"):
+			warns++
+		}
+	}
+	require.Equal(t, 1, errors)
+	require.GreaterOrEqual(t, warns, 1)
+
+	require.Contains(t, lines[0], "signing policy for reward epoch 101 is")
+	require.Contains(t, lines[0], "voter set of epoch 100")
+}
+
+func TestPolicyOverdue(t *testing.T) {
+	epochStart := time.Unix(int64(timing.ExpectedRewardEpochStartTS(breakingEpoch)), 0)
+	grace := time.Duration(timing.Chain.CollectDurationSec*policyOverdueGraceRounds) * time.Second
+
+	require.LessOrEqual(t, policyOverdue(breakingEpoch, epochStart), time.Duration(0))
+	require.LessOrEqual(t, policyOverdue(breakingEpoch, epochStart.Add(grace)), time.Duration(0))
+	require.Equal(t, time.Second, policyOverdue(breakingEpoch, epochStart.Add(grace+time.Second)))
 }

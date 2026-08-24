@@ -237,6 +237,8 @@ The new `Relay` does not emit `SigningPolicyInitialized` for `starting_reward_ep
 
 Both keys must be set, or neither.
 A `SigningPolicyInitialized` event emitted by the contract that is not authoritative for its reward epoch is ignored and logged as a warning.
+The client logs the resolved schedule at startup, and both contracts stay queried after the switch, so events emitted outside a contract's authority always surface as warnings.
+If the signing policy of a reward epoch is still missing shortly after the epoch's expected start — a mis-scheduled cutover, an indexer that does not index the new address, or a postponed switch — the client logs an error and then a warning per polling tick, because rounds are meanwhile decided with the previous reward epoch's voter set.
 
 The indexer must index `relay_cutover.address` from its deployment block on; nothing backfills the logs.
 

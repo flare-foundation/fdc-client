@@ -49,7 +49,9 @@ func (s RelaySource) addressFor(rewardEpochID uint64) common.Address {
 	return s.current
 }
 
-// addresses lists every Relay that may hold a recent signing policy.
+// addresses lists every Relay the source observes. The retired Relay stays in the set after the
+// switch so anything it still emits is dropped with a warning instead of going unseen — the
+// diagnostic for a mis-scheduled cutover.
 func (s RelaySource) addresses() []common.Address {
 	if !s.cutover.Scheduled() {
 		return []common.Address{s.current}
@@ -58,18 +60,16 @@ func (s RelaySource) addresses() []common.Address {
 	return []common.Address{s.current, s.cutover.Address}
 }
 
-// addressesAfter lists the Relays that can still emit a signing policy for a reward epoch
-// greater than rewardEpochID. Both are queried while the switch is not yet passed, since one
-// query window can span it.
-func (s RelaySource) addressesAfter(rewardEpochID uint64) []common.Address {
+// schedule describes which Relay serves which reward epochs, for the startup log.
+func (s RelaySource) schedule() string {
 	if !s.cutover.Scheduled() {
-		return []common.Address{s.current}
-	}
-	if rewardEpochID >= s.cutover.StartingEpoch() {
-		return []common.Address{s.cutover.Address}
+		return fmt.Sprintf("no relay cutover scheduled: reading signing policies from %v", s.current)
 	}
 
-	return s.addresses()
+	return fmt.Sprintf(
+		"relay cutover scheduled: reading signing policies from %v up to and including reward epoch %d and from %v from reward epoch %d on",
+		s.current, s.cutover.StartingEpoch(), s.cutover.Address, s.cutover.StartingEpoch()+1,
+	)
 }
 
 // acceptPolicies parses logs emitted by address and keeps those address is authoritative for.
@@ -130,10 +130,11 @@ func (s RelaySource) fetchLatestPolicies(ctx context.Context, db *gorm.DB, count
 
 // fetchPoliciesAfter returns the signing policies for reward epochs above rewardEpochID
 // emitted between the from and to timestamps, ordered by increasing reward epoch.
+// Every Relay is queried regardless of the switch; unauthoritative events warn in acceptPolicies.
 func (s RelaySource) fetchPoliciesAfter(ctx context.Context, db *gorm.DB, rewardEpochID uint64, from, to int64) ([]parsedPolicy, error) {
 	var policies []parsedPolicy
 
-	for _, address := range s.addressesAfter(rewardEpochID) {
+	for _, address := range s.addresses() {
 		logs, err := database.FetchLogsByAddressAndTopic0Timestamp(ctx, db, database.LogsParams{
 			Address: address,
 			Topic0:  signingPolicyInitializedEventSel,

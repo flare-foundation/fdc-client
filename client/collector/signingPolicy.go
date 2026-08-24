@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
@@ -17,6 +18,10 @@ import (
 // initialPolicyCount is the number of most-recent signing policies fetched at startup.
 const initialPolicyCount = 3
 
+// policyOverdueGraceRounds is the slack, in voting rounds, granted past a reward epoch's
+// expected start before its missing signing policy counts as overdue.
+const policyOverdueGraceRounds = 10
+
 // SigningPolicyInitializedListener initiates a channel that serves signingPolicyInitialized events emitted by the Relay contracts of source.
 func SigningPolicyInitializedListener(
 	ctx context.Context,
@@ -25,6 +30,8 @@ func SigningPolicyInitializedListener(
 	registryContractAddress common.Address,
 	votersDataChan chan<- []shared.VotersData,
 ) {
+	logger.Info(source.schedule())
+
 	// initial query
 	policies, err := source.fetchLatestPolicies(ctx, db, initialPolicyCount)
 	if err != nil {
@@ -154,6 +161,8 @@ func queryNextSPI(
 	ticker := time.NewTicker(time.Duration(timing.Chain.CollectDurationSec-1) * time.Second) // ticker that is guaranteed to tick at least once per SystemVotingRound
 	defer ticker.Stop()
 
+	overdueLogged := false
+
 	for {
 		now := time.Now()
 
@@ -170,6 +179,17 @@ func queryNextSPI(
 			return policies, nil
 		}
 
+		// a stall here is not fail-safe: rounds keep being decided with the last stored voter set
+		if overdue := policyOverdue(latestRewardEpoch+1, now); overdue > 0 {
+			msg := fmt.Sprintf("signing policy for reward epoch %d is %v overdue; rounds run on the voter set of epoch %d until it arrives", latestRewardEpoch+1, overdue.Round(time.Second), latestRewardEpoch)
+			if overdueLogged {
+				logger.Warn(msg) // Error carries a stacktrace per config — once is enough
+			} else {
+				logger.Error(msg)
+				overdueLogged = true
+			}
+		}
+
 		select {
 		case <-ticker.C:
 			logger.Debug("starting next queryNextSPI iteration")
@@ -177,4 +197,13 @@ func queryNextSPI(
 			return nil, ctx.Err()
 		}
 	}
+}
+
+// policyOverdue returns how far past its grace period the signing policy of rewardEpochID is
+// at now; positive means rounds of that epoch already run on the previous voter set.
+func policyOverdue(rewardEpochID uint64, now time.Time) time.Duration {
+	expectedStart := time.Unix(int64(timing.ExpectedRewardEpochStartTS(rewardEpochID)), 0)
+	grace := time.Duration(timing.Chain.CollectDurationSec*policyOverdueGraceRounds) * time.Second
+
+	return now.Sub(expectedStart) - grace
 }
