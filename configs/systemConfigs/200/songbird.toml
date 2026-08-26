@@ -12,7 +12,7 @@ voter_registry_contract = "0xd23FAE88c09e6A77dD9eFcc29D6bBC55D2e74310"
 # starting_reward_epoch, and from the address below afterwards.
 # The indexer must index that address from its deployment block on; nothing backfills.
 # [relay_cutover]
-# address = "0x..."
+# address = "0xc1BC89b717Af42AE27497C9FFb996002D3AC5031"
 # starting_reward_epoch = 0
 
 [timing]
