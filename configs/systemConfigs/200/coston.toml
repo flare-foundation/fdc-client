@@ -10,9 +10,9 @@ voter_registry_contract = "0x42F4526BFC6f892DB515a832a52eFc9edFADf6c0"
 # deployment. Signing policies are read from relay_contract up to and including
 # starting_reward_epoch, and from the address below afterwards.
 # The indexer must index that address from its deployment block on; nothing backfills.
-# [relay_cutover]
-# address = "0xEcD0B60Ea5E01e4D0bFd621c8920B40A32389b83"
-# starting_reward_epoch = 0
+[relay_cutover]
+address = "0xEcD0B60Ea5E01e4D0bFd621c8920B40A32389b83"
+starting_reward_epoch = 5991
 
 [timing]
 t0 = 1658429955
