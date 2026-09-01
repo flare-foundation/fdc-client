@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Recommended per-queue throttle values.
@@ -73,4 +75,23 @@ func (u *UserRaw) Validate() (warnings []string, err error) {
 	}
 
 	return warnings, err
+}
+
+// Validate checks the system configuration for inconsistent settings.
+// Per the Flare logging guide, Validate does not log; the caller surfaces the error.
+func (s *System) Validate() error {
+	switch {
+	case s.RelayCutover.StartingRewardEpoch < 0:
+		return errors.New("relay_cutover.starting_reward_epoch must not be negative")
+	case s.RelayCutover.Address != (common.Address{}) && s.RelayCutover.StartingRewardEpoch == 0:
+		return errors.New("relay_cutover.address is set but starting_reward_epoch (> 0) is not")
+	case s.RelayCutover.Address == (common.Address{}) && s.RelayCutover.StartingRewardEpoch > 0:
+		return errors.New("relay_cutover.starting_reward_epoch is set but address is not")
+	// Same address for both would make the boundary unenforceable: every event would look
+	// authoritative for whichever side of it the epoch falls on.
+	case s.RelayCutover.Address != (common.Address{}) && s.RelayCutover.Address == s.Addresses.RelayContract:
+		return errors.New("relay_cutover.address equals addresses.relay_contract")
+	}
+
+	return nil
 }

@@ -221,6 +221,27 @@ fdc_contract = "0xCf6798810Bc8C0B803121405Fee2A5a9cc0CA5E5"
 voter_registry_contract = "0xE2c06DF29d175Aa0EcfcD10134eB96f8C94448A3"
 ```
 
+#### Relay contract switch
+
+When the `Relay` contract is redeployed, the new address and the reward epoch the switch happens on are configured in the same file.
+
+```toml
+[relay_cutover]
+address = "0x..."
+starting_reward_epoch = 100
+```
+
+Signing policies are read from `relay_contract` up to and including `starting_reward_epoch`, and from `relay_cutover.address` afterwards.
+The new `Relay` does not emit `SigningPolicyInitialized` for `starting_reward_epoch` itself: that policy is initialized on the old `Relay` before the switch and seeded into the new one at deployment.
+`starting_reward_epoch` is therefore the same value the flare-system-client is configured with.
+
+Both keys must be set, or neither.
+A `SigningPolicyInitialized` event emitted by the contract that is not authoritative for its reward epoch is ignored and logged as a warning.
+The client logs the resolved schedule at startup, and both contracts stay queried after the switch, so events emitted outside a contract's authority always surface as warnings.
+If the signing policy of a reward epoch is still missing shortly after the epoch's expected start — a mis-scheduled cutover, an indexer that does not index the new address, or a postponed switch — the client logs an error and then a warning per polling tick, because rounds are meanwhile decided with the previous reward epoch's voter set.
+
+The indexer must index `relay_cutover.address` from its deployment block on; nothing backfills the logs.
+
 The timestamp of the start of the first reward epoch (T0) and length of reward epoch have to be specified.
 
 ```toml
