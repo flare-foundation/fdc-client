@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.4.0](https://github.com/flare-foundation/fdc-client/tree/v1.4.0) - YYYY-MM-DD
+## [v1.4.0](https://github.com/flare-foundation/fdc-client/tree/v1.4.0) - 2026-09-07
 
 ### Added
 
