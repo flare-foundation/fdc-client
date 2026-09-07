@@ -12,18 +12,18 @@
 
 # Flare Data Connector Client
 
-Flare Data Connector client supports tha attestation process.
+Flare Data Connector client supports the attestation process.
 It does the following tasks:
 
 - Queries Flare C-Chain indexer for signing policies, attestation requests, and bitVotes.
 - Assigns the attestation requests to the correct voting rounds and begins their verification process.
 - Provides bitVote for each round.
 - Computes consensus bitVote for each round.
-- For each round, provides Merkle root of Merkle tree build on hashes of the confirmed attestations.
+- For each round, provides Merkle root of Merkle tree built on hashes of the confirmed attestations.
 
 The client has no direct interactions with the Flare blockchain/node. The data is read through C-Chain indexer and submitted through Flare System Client.
 
-[![API Reference](https://pkg.go.dev/badge/github.com/flare-foundation/fdc-client)](https://pkg.go.dev/github.com/flare-foundation/fdc-client@v1.2.6)
+[![API Reference](https://pkg.go.dev/badge/github.com/flare-foundation/fdc-client)](https://pkg.go.dev/github.com/flare-foundation/fdc-client@v1.4.0)
 
 ## Protocol
 
@@ -31,33 +31,36 @@ See [whitepaper](https://dev.flare.network/pdf/whitepapers/20240224-FlareDataCon
 
 ## Server endpoints
 
-| Method | Endpoint   | Description                                            |
-| ------ | ---------- | ------------------------------------------------------ |
-| GET    | `/health`  | Returns 200 if healthy.                                |
-| GET    | `/info`    | Returns client status. See [Info](#info).               |
+| Method | Endpoint  | Description                               |
+| ------ | --------- | ----------------------------------------- |
+| GET    | `/health` | Returns 200 if healthy.                   |
+| GET    | `/info`   | Returns client status. See [Info](#info). |
+
+All endpoints except `/health` require the API key in the request header named by `api_key_name`.
+Error responses are plain-text bodies with the matching HTTP status code.
 
 ### FSP
 
-Endpoints for Flare Systems Protocol clint.
+Endpoints for Flare Systems Protocol client.
 
 All endpoints return a json with fields:
 
-- status - string ("OK", "EMPTY", or "RETRY")
-- data - 0x prefixed hex string
-- additional data - 0x prefixed hex string
+- `status` - string ("OK", "EMPTY", or "RETRY")
+- `data` - 0x prefixed hex string
+- `additionalData` - 0x prefixed hex string
 
 The path component /fsp is [configurable](#rest-server).
 
-| Method | Endpoint                                                | Description                                                                                                                                                                                                      |
-| ------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/fsp/submit1/{votingRoundID}/{submitAddress}`          | Returns empty data ("0x") with status "OK". Unless called before the start of the voting round.                                                                                                                  |
-| GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting. round.                                                                                             |
-| GET    | `/fsp/submitSignatures/{votingRoundID}/{submitAddress}` | Returns message for voting as data and consensus bit-vote as additional data. If data has not been assembled yet no data with status "RETRY" is returned. If data cannot be assembled status "EMPTY is returned. |
+| Method | Endpoint                                                | Description                                                                                                                                                                                                       |
+| ------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/fsp/submit1/{votingRoundID}/{submitAddress}`          | Returns empty data ("0x") with status "OK". Unless called before the start of the voting round.                                                                                                                   |
+| GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting round.                                                                                               |
+| GET    | `/fsp/submitSignatures/{votingRoundID}/{submitAddress}` | Returns message for voting as data and consensus bit-vote as additional data. If data has not been assembled yet no data with status "RETRY" is returned. If data cannot be assembled status "EMPTY" is returned. |
 
 ### Info
 
-| Method | Endpoint | Description                                                                  |
-| ------ | -------- | ---------------------------------------------------------------------------- |
+| Method | Endpoint | Description                                                                 |
+| ------ | -------- | --------------------------------------------------------------------------- |
 | GET    | `/info`  | Returns client status: stored round range, signing policies, current epoch. |
 
 The endpoint is API key protected.
@@ -75,12 +78,18 @@ Returns a JSON with fields:
 
 Endpoints for Data Availability layer.
 
-| Method | Endpoint                              | Description |
-| ------ | ------------------------------------- | ----------- |
-| GET    | `/da/getRequests/{votingRoundID}`     |             |
-| GET    | `/da/getAttestations/{votingRoundID}` |             |
+| Method | Endpoint                              | Description                                                                   |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------------- |
+| GET    | `/da/getRequests/{votingRoundID}`     | Returns all attestation requests of the round with their verification status. |
+| GET    | `/da/getAttestations/{votingRoundID}` | Returns the confirmed attestations of the round with their Merkle proofs.     |
 
-The path component /da is [configurable](#rest-server)
+Both return a JSON with a `Status` field: `OK`, or `NOT_AVAILABLE` if the round is not stored.
+`getAttestations` also returns `NOT_AVAILABLE` until the round reaches consensus.
+`getRequests` returns `Requests`, a list of objects with `request`, `response` (hex encoded), `status` (`OK`, `WrongMIC`, `FailedLUT`, or `FAILED`), `consensus`, and `indexes`.
+`getAttestations` returns `Attestations`, a list of objects with `roundId`, `request`, `response` (hex encoded), `abi`, and `proof`.
+Only rounds within the [round buffer](#rounds) are served.
+
+The path component /da is [configurable](#rest-server).
 
 ## Configurations
 
@@ -159,24 +168,24 @@ In `userConfig.toml`, a path to the json file is specified.
 For each supported source of an attestation type, an url and an API key of a verifier server should be specified.
 In addition, LUT limit of the pair must be provided as a string representing a non-negative number smaller than $2^{64}$.
 
-Each verifier needs a designated queue that is assigned by it name.
+Each verifier needs a designated queue that is assigned by its name.
 The same queue can be assigned to more than one verifier.
 
 ```toml
 # Verifiers for <attestationType>
-[verifiers.<attestationType>]
+[types.<attestationType>]
 abi_path = "configs/abis/<attestationType>.json"
 
 ## <source1>
-[verifiers.<attestationType>.Sources.<source1>]
+[types.<attestationType>.Sources.<source1>]
 url = "http://url/of/the/verifier1"
 api_key = "api-key1"
 lut_limit = "123124124"
 queue = "queue1"
 
 
-## <source1>
-[verifiers.<attestationType>.Sources.<source2>]
+## <source2>
+[types.<attestationType>.Sources.<source2>]
 url = "http://url/of/the/verifier2"
 api_key = "api-key2"
 lut_limit = "123124124"
@@ -208,7 +217,7 @@ The shipped defaults are `200` and `20`.
 ### System Configs
 
 System configs for a pair of chain and protocol ID should be specified in
-`configs/systemConfigs/<protrocolID>/<chain>.toml`
+`configs/systemConfigs/<protocolID>/<chain>.toml`
 
 The client needs data from three contracts `Submit` for bitVotes, `Relay` for signing policies, and `FDC` for attestation requests.
 The addresses must be specified in the systemConfig file.
@@ -261,6 +270,8 @@ ConfirmedBlockHeightExists
 Payment
 ReferencedPaymentNonexistence
 EVMTransaction
+XRPPayment
+XRPPaymentNonexistence
 ```
 
 #### Sources:
