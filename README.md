@@ -31,10 +31,10 @@ See [whitepaper](https://dev.flare.network/pdf/whitepapers/20240224-FlareDataCon
 
 ## Server endpoints
 
-| Method | Endpoint   | Description                                            |
-| ------ | ---------- | ------------------------------------------------------ |
-| GET    | `/health`  | Returns 200 if healthy.                                |
-| GET    | `/info`    | Returns client status. See [Info](#info).               |
+| Method | Endpoint  | Description                               |
+| ------ | --------- | ----------------------------------------- |
+| GET    | `/health` | Returns 200 if healthy.                   |
+| GET    | `/info`   | Returns client status. See [Info](#info). |
 
 All endpoints except `/health` require the API key in the request header named by `api_key_name`.
 Error responses are plain-text bodies with the matching HTTP status code.
@@ -51,16 +51,16 @@ All endpoints return a json with fields:
 
 The path component /fsp is [configurable](#rest-server).
 
-| Method | Endpoint                                                | Description                                                                                                                                                                                                      |
-| ------ | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/fsp/submit1/{votingRoundID}/{submitAddress}`          | Returns empty data ("0x") with status "OK". Unless called before the start of the voting round.                                                                                                                  |
-| GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting round.                                                                                             |
+| Method | Endpoint                                                | Description                                                                                                                                                                                                       |
+| ------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/fsp/submit1/{votingRoundID}/{submitAddress}`          | Returns empty data ("0x") with status "OK". Unless called before the start of the voting round.                                                                                                                   |
+| GET    | `/fsp/submit2/{votingRoundID}/{submitAddress}`          | Returns encoded bit-vote as data for the round. Unless called before start of the choose phase of the voting round.                                                                                               |
 | GET    | `/fsp/submitSignatures/{votingRoundID}/{submitAddress}` | Returns message for voting as data and consensus bit-vote as additional data. If data has not been assembled yet no data with status "RETRY" is returned. If data cannot be assembled status "EMPTY" is returned. |
 
 ### Info
 
-| Method | Endpoint | Description                                                                  |
-| ------ | -------- | ---------------------------------------------------------------------------- |
+| Method | Endpoint | Description                                                                 |
+| ------ | -------- | --------------------------------------------------------------------------- |
 | GET    | `/info`  | Returns client status: stored round range, signing policies, current epoch. |
 
 The endpoint is API key protected.
@@ -78,15 +78,15 @@ Returns a JSON with fields:
 
 Endpoints for Data Availability layer.
 
-| Method | Endpoint                              | Description                                                             |
-| ------ | ------------------------------------- | ----------------------------------------------------------------------- |
+| Method | Endpoint                              | Description                                                                   |
+| ------ | ------------------------------------- | ----------------------------------------------------------------------------- |
 | GET    | `/da/getRequests/{votingRoundID}`     | Returns all attestation requests of the round with their verification status. |
 | GET    | `/da/getAttestations/{votingRoundID}` | Returns the confirmed attestations of the round with their Merkle proofs.     |
 
-Both return a JSON with a `status` field: `OK`, or `NOT_AVAILABLE` if the round is not stored.
+Both return a JSON with a `Status` field: `OK`, or `NOT_AVAILABLE` if the round is not stored.
 `getAttestations` also returns `NOT_AVAILABLE` until the round reaches consensus.
-`getRequests` returns `requests`, a list of objects with `request`, `response` (hex encoded), `status` (`OK`, `WrongMIC`, `FailedLUT`, or `FAILED`), `consensus`, and `indexes`.
-`getAttestations` returns `attestations`, a list of objects with `roundId`, `request`, `response` (hex encoded), `abi`, and `proof`.
+`getRequests` returns `Requests`, a list of objects with `request`, `response` (hex encoded), `status` (`OK`, `WrongMIC`, `FailedLUT`, or `FAILED`), `consensus`, and `indexes`.
+`getAttestations` returns `Attestations`, a list of objects with `roundId`, `request`, `response` (hex encoded), `abi`, and `proof`.
 Only rounds within the [round buffer](#rounds) are served.
 
 The path component /da is [configurable](#rest-server).

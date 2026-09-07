@@ -5,9 +5,9 @@
 ### Added
 
 - Optional `[relay_cutover]` system-config section (`address`, `starting_reward_epoch`) scheduling the switch to a redeployed `Relay` contract.
-Signing policies are read from `relay_contract` up to and including `starting_reward_epoch` and from `relay_cutover.address` afterwards.
-Events from the contract that is not authoritative for their reward epoch are ignored and logged; setting only one of the two keys is a fatal configuration error.
-A signing policy still missing ten voting rounds past its epoch's expected start is logged as an error, then as a warning per polling tick.
+  Signing policies are read from `relay_contract` up to and including `starting_reward_epoch` and from `relay_cutover.address` afterwards.
+  Events from the contract that is not authoritative for their reward epoch are ignored and logged; setting only one of the two keys is a fatal configuration error.
+  A signing policy still missing ten voting rounds past its epoch's expected start is logged as an error, then as a warning per polling tick.
 - Coston system config ships `[relay_cutover]` to the redeployed `Relay` with `starting_reward_epoch = 5991`; Flare, Songbird, and Coston2 ship their new `Relay` addresses commented out.
 - API-key-protected `GET /info` endpoint returning stored-round range, current epoch, round buffer size, signing-policy summaries, and server time.
 - `cors_origin` REST-server option (`REST_CORS_ORIGIN`) setting the allowed CORS origin; empty by default.
@@ -15,13 +15,12 @@ A signing policy still missing ten voting rounds past its epoch's expected start
 
 ### Changed
 
-- **Breaking (API):** `GET /da/getRequests` and `GET /da/getAttestations` envelopes use lowercase keys `status`, `requests`, `attestations` instead of `Status`, `Requests`, `Attestations`.
 - **Breaking (API):** CORS denies all cross-origin requests by default instead of allowing `*`; set `cors_origin` (or `REST_CORS_ORIGIN`) to permit one origin.
 - **Behavioral (API):** error responses are plain-text bodies (`Content-Type: text/plain`) instead of `application/json` `{"error": ...}`; status codes are unchanged.
 - **Breaking (config):** `lut_limit` is required and validated for every attestation source; a missing or out-of-range value fails startup.
 - **Breaking (config):** a verifier source referencing an undefined queue fails startup instead of failing per request.
 - **Behavioral:** the round buffer holds 80 rounds instead of 256, shrinking the DA-servable window from roughly 6.4 h to 2 h.
-It is configurable as `buffer_size` in a new `[rounds]` user-config section (default 80, minimum 3) and reported as `roundBufferSize` by `GET /info`.
+  It is configurable as `buffer_size` in a new `[rounds]` user-config section (default 80, minimum 3) and reported as `roundBufferSize` by `GET /info`.
 - `configs/userConfig.toml` sets `max_dequeues_per_second = 200` and `max_workers = 20` for every queue instead of `0`; `0` still means unbounded and now logs a startup warning.
 - Unrecognised `size` key removed from every `[queues.*]` block in `configs/userConfig.toml`.
 - Shutdown on an interrupt signal is immediate instead of after two minutes.
@@ -32,12 +31,12 @@ It is configurable as `buffer_size` in a new `[rounds]` user-config section (def
 
 - `/api-doc` (Swagger) endpoint and `swagger_path` config option.
 - Legacy VoterRegistry address and ABI switch; reward epochs before 417 (Flare, Songbird), 5451 (Coston), and 5339 (Coston2) are no longer supported.
-A wrong registry address now fails quietly: every bitvote is rejected with "no signing address" at DEBUG level and rounds stop finalizing.
+  A wrong registry address now fails quietly: every bitvote is rejected with "no signing address" at DEBUG level and rounds stop finalizing.
 
 ### Fixed
 
 - `GET /da/getAttestations` returns `NOT_AVAILABLE` until a round reaches consensus instead of `OK` with an empty list.
-Early queries no longer mark a round done and discard unprocessed requests.
+  Early queries no longer mark a round done and discard unprocessed requests.
 - Data races between the manager writing a round and the servers reading it (attestation lock held on merge, DA request indexes deep-copied, retry walk over a snapshot).
 - Priority-queue initialisation race: every queue is initiated before any dequeue worker starts.
 - Consensus is computed on a dedicated worker goroutine instead of the bit-vote ingest path.

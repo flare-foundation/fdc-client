@@ -23,14 +23,14 @@ func NewDAController(rounds *storage.Cyclic[uint32, *round.Round]) *DAController
 
 // RequestsResponse is the response for the getRequests endpoint.
 type RequestsResponse struct {
-	Status   DAResponseStatus `json:"status"`
-	Requests []DARequest      `json:"requests"`
+	Status   DAResponseStatus `json:"Status"`
+	Requests []DARequest      `json:"Requests"`
 }
 
 // AttestationResponse is the response for the getAttestations endpoint.
 type AttestationResponse struct {
-	Status       DAResponseStatus `json:"status"`
-	Attestations []DAAttestation  `json:"attestations"`
+	Status       DAResponseStatus `json:"Status"`
+	Attestations []DAAttestation  `json:"Attestations"`
 }
 
 func validateRoundIDParam(r *http.Request) (uint32, error) {
