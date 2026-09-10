@@ -1,5 +1,11 @@
 # Changelog
 
+## [v1.4.1](https://github.com/flare-foundation/fdc-client/tree/v1.4.1) - 2026-09-10
+
+### Added
+
+- Coston 2 `[relay_cutover]` in systemConfigs.
+
 ## [v1.4.0](https://github.com/flare-foundation/fdc-client/tree/v1.4.0) - 2026-09-07
 
 ### Added
