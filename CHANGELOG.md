@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Songbird and Flare `[relay_cutover]` in systemConfigs: `starting_reward_epoch` 437 on Songbird and 441 on Flare, with the pre-generated new `Relay` addresses.
+
 ## [v1.4.1](https://github.com/flare-foundation/fdc-client/tree/v1.4.1) - 2026-09-10
 
 ### Added
