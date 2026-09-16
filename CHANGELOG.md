@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [v1.4.2](https://github.com/flare-foundation/fdc-client/tree/v1.4.2) - 2026-09-16
 
 ### Added
 
