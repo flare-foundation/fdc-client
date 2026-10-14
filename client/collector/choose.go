@@ -93,10 +93,6 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 
 	nextRoundID, nextEndTS := timing.NextChooseEnd(state.BlockTimestamp)
 
-	bitVoteTicker := time.NewTicker(time.Hour) // timer will be reset to collect duration
-	defer bitVoteTicker.Stop()
-	go configureTicker(ctx, bitVoteTicker, time.Unix(int64(nextEndTS), 0), bitVoteHeadStart)
-
 	for {
 		ticker := time.NewTicker(databasePollTime)
 
@@ -128,23 +124,26 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 
 		ticker.Stop()
 
+		// Sleep until headStart before the next choose end. The wait is derived from
+		// wall-clock time every round: a free-running ticker follows the monotonic
+		// clock, and where that clock is not disciplined (e.g. inside a VM) its rate
+		// error adds up round after round until the trigger fires too late.
+		wait := time.NewTimer(untilPollStart(time.Now(), nextEndTS, bitVoteHeadStart))
+
 		select {
-		case <-bitVoteTicker.C:
+		case <-wait.C:
 		case <-ctx.Done():
+			wait.Stop()
 			logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
 			return
 		}
 	}
 }
 
-// configureTicker resets the ticker at headStart before start to collect phase duration.
-func configureTicker(ctx context.Context, ticker *time.Ticker, start time.Time, headStart time.Duration) {
-	select {
-	case <-time.After(time.Until(start) - headStart):
-		ticker.Reset(time.Duration(timing.Chain.CollectDurationSec) * time.Second)
-	case <-ctx.Done():
-		return
-	}
+// untilPollStart returns the time left from now until headStart before endTS.
+// The result is not positive when that moment has already passed.
+func untilPollStart(now time.Time, endTS uint64, headStart time.Duration) time.Duration {
+	return time.Unix(int64(endTS), 0).Sub(now) - headStart
 }
 
 // tryTriggerBitVote checks whether the blockchain timestamp has surpassed the end of choose phase or local time has surpassed it for more than bitVoteOffChainTriggerSeconds.
