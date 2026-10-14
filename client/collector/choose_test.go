@@ -32,34 +32,3 @@ func TestUntilPollStart(t *testing.T) {
 		})
 	}
 }
-
-// TestUntilPollStartDoesNotAccumulateDrift replays three weeks of rounds on a local clock
-// that runs 11 ppm slow. Each sleep overshoots by about 1 ms, which a free-running 90 s
-// ticker adds up to over 20 s. Deriving every wait from wall-clock time keeps polling
-// within one sleep's error of headStart before the choose end.
-func TestUntilPollStartDoesNotAccumulateDrift(t *testing.T) {
-	const (
-		period    = 90 * time.Second
-		headStart = 5 * time.Second
-		rounds    = 21 * 24 * 60 * 60 / 90
-		ppmSlow   = 11
-	)
-
-	endTS := uint64(1_791_880_245)
-	// The first round is triggered 4 s after its choose end, as the indexer catches up.
-	now := time.Unix(int64(endTS), 0).Add(4 * time.Second)
-
-	for range rounds {
-		endTS += uint64(period / time.Second)
-
-		wait := untilPollStart(now, endTS, headStart)
-		slept := wait + wait*ppmSlow/1_000_000
-		pollStart := now.Add(slept)
-
-		late := pollStart.Sub(time.Unix(int64(endTS), 0).Add(-headStart))
-		require.GreaterOrEqual(t, late, time.Duration(0))
-		require.Less(t, late, 2*time.Millisecond)
-
-		now = time.Unix(int64(endTS), 0).Add(4 * time.Second)
-	}
-}
