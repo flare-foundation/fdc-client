@@ -26,7 +26,6 @@ const (
 	minSleepTime                  = 5 * time.Second
 	requestListenerInterval       = 2 * time.Second
 	databasePollTime              = 1 * time.Second
-	bitVoteHeadStart              = 5 * time.Second
 
 	syncRetry = 30
 )
