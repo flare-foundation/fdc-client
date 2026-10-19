@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The bit-vote trigger no longer drifts later every round on hosts whose monotonic clock is not NTP-disciplined, such as containers in a Docker Desktop VM.
+  It polls the indexer state every second instead of sleeping on a 90-second ticker between rounds.
+  Before the fix, the drift could push the trigger past the system client's signature window after about three weeks of uptime, and FDC signatures stopped until a restart.
+
 ## [v1.4.2](https://github.com/flare-foundation/fdc-client/tree/v1.4.2) - 2026-09-16
 
 ### Added

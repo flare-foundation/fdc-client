@@ -93,43 +93,19 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 
 	nextRoundID, nextEndTS := timing.NextChooseEnd(state.BlockTimestamp)
 
-	bitVoteTicker := time.NewTicker(time.Hour) // timer will be reset to collect duration
-	defer bitVoteTicker.Stop()
-	go configureTicker(ctx, bitVoteTicker, time.Unix(int64(nextEndTS), 0), bitVoteHeadStart)
+	ticker := time.NewTicker(databasePollTime)
+	defer ticker.Stop()
 
 	for {
-		ticker := time.NewTicker(databasePollTime)
-
-		for {
-			state, err := database.FetchState(ctx, db, nil)
-
-			if err != nil {
-				logger.Errorf("database: %v", err)
-			} else {
-				var done bool
-				nextRoundID, nextEndTS, done = tryTriggerBitVote(
-					ctx, nextRoundID, nextEndTS, state.BlockTimestamp, trigger,
-				)
-
-				if done {
-					break
-				}
-			}
-
-			select {
-			case <-ticker.C:
-
-			case <-ctx.Done():
-				ticker.Stop()
-				logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
-				return
-			}
+		state, err := database.FetchState(ctx, db, nil)
+		if err != nil {
+			logger.Errorf("database: %v", err)
+		} else {
+			nextRoundID, nextEndTS = tryTriggerBitVote(ctx, nextRoundID, nextEndTS, state.BlockTimestamp, trigger)
 		}
 
-		ticker.Stop()
-
 		select {
-		case <-bitVoteTicker.C:
+		case <-ticker.C:
 		case <-ctx.Done():
 			logger.Infof("prepareChooseTriggers exiting: %v", ctx.Err())
 			return
@@ -137,25 +113,15 @@ func PrepareChooseTrigger(ctx context.Context, trigger chan uint32, db *gorm.DB)
 	}
 }
 
-// configureTicker resets the ticker at headStart before start to collect phase duration.
-func configureTicker(ctx context.Context, ticker *time.Ticker, start time.Time, headStart time.Duration) {
-	select {
-	case <-time.After(time.Until(start) - headStart):
-		ticker.Reset(time.Duration(timing.Chain.CollectDurationSec) * time.Second)
-	case <-ctx.Done():
-		return
-	}
-}
-
 // tryTriggerBitVote checks whether the blockchain timestamp has surpassed the end of choose phase or local time has surpassed it for more than bitVoteOffChainTriggerSeconds.
-// If conditions are met, roundID is passed to the channel c, and updated roundID and endTS are returned.
+// If conditions are met, roundID is passed to the channel c, and the roundID and endTS of the next round are returned.
 func tryTriggerBitVote(
 	ctx context.Context,
 	roundID uint32,
 	endTS uint64,
 	currentBlockTime uint64,
 	c chan uint32,
-) (uint32, uint64, bool) {
+) (uint32, uint64) {
 	now := uint64(time.Now().Unix())
 
 	logMsg := ""
@@ -176,11 +142,11 @@ func tryTriggerBitVote(
 
 		case <-ctx.Done():
 			logger.Infof("tryTriggerBitVote exiting: %v", ctx.Err())
-			return roundID, endTS, false
+			return roundID, endTS
 		}
 
-		return roundID + 1, endTS + timing.Chain.CollectDurationSec, true
+		return roundID + 1, endTS + timing.Chain.CollectDurationSec
 	}
 
-	return roundID, endTS, false
+	return roundID, endTS
 }
