@@ -8,6 +8,11 @@
   It polls the indexer state every second instead of sleeping on a 90-second ticker between rounds.
   Before the fix, the drift could push the trigger past the system client's signature window after about three weeks of uptime, and FDC signatures stopped until a restart.
 
+### Security
+
+- TLS connections reject certificates issued under the eight compromised eMudhra (emSign) intermediate CA keys, whichever root they chain to.
+  The CA bundle in the image no longer contains the emSign ECC Root CA - G3 and Comodo AAA Services roots.
+
 ## [v1.4.2](https://github.com/flare-foundation/fdc-client/tree/v1.4.2) - 2026-09-16
 
 ### Added
