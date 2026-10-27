@@ -12,37 +12,39 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
-
-      - name: Check if stable release
-        id: check
-        run: |
-          # align with build-docker.yml: stable only for strict semver tags
-          if [[ "${{ github.ref_name }}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "stable=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "stable=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Extract changelog
-        id: changelog
-        run: |
-          tag="${{ github.ref_name }}"
-          body=$(sed -n "/^\# .*\[${tag}\]/,/^\# .*\[v/{/^\# .*\[v/!p}" CHANGELOG.md || true)
-          cat >> "$GITHUB_OUTPUT" <<DELIM
-          body<<EOF
-          ${body}
-
-          **Full Changelog**: https://github.com/${{ github.repository }}/blob/${tag}/CHANGELOG.md
-          EOF
-          DELIM
+          persist-credentials: false
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          body: ${{ steps.changelog.outputs.body }}
-          draft: false
-          prerelease: ${{ steps.check.outputs.stable != 'true' }}
-          make_latest: ${{ steps.check.outputs.stable == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # align with build-docker.yml: stable only for strict semver tags
+          if [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            stable=true
+          else
+            stable=false
+          fi
+
+          notes="$RUNNER_TEMP/release-notes.md"
+          {
+            sed -n "/^#.*\[${TAG}\]/,/^#.*\[v/{/^#.*\[v/!p}" CHANGELOG.md || true
+            echo
+            echo "**Full Changelog**: https://github.com/${REPOSITORY}/blob/${TAG}/CHANGELOG.md"
+          } >"$notes"
+
+          prerelease=true
+          if [[ "$stable" == "true" ]]; then
+            prerelease=false
+          fi
+
+          gh release create "$TAG" \
+            --verify-tag \
+            --title "$TAG" \
+            --notes-file "$notes" \
+            --prerelease="$prerelease" \
+            --latest="$stable"
