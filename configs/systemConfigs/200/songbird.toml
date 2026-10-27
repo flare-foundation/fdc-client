@@ -1,12 +1,8 @@
 [addresses]
 submit_contract = "0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f"
-relay_contract = "0xCB86E8Be709001e01897Bf59847406853da8f14b"
+relay_contract = "0xc1BC89b717Af42AE27497C9FFb996002D3AC5031"
 fdc_contract = "0xCfD4669a505A70c2cE85db8A1c1d14BcDE5a1a06"
 voter_registry_contract = "0xd23FAE88c09e6A77dD9eFcc29D6bBC55D2e74310"
-
-[relay_cutover]
-address = "0xc1BC89b717Af42AE27497C9FFb996002D3AC5031"
-starting_reward_epoch = 437
 
 [timing]
 t0 = 1658429955

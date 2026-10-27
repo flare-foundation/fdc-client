@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- The `[relay_cutover]` system-config section.
+  Flare, Songbird, Coston and Coston2 are all past their Relay cutover, and the bundled system configs now set the new `Relay` as `relay_contract`.
+  The error logged for a signing policy missing past its reward epoch's expected start is removed with it.
+
 ## [v1.4.3](https://github.com/flare-foundation/fdc-client/tree/v1.4.3) - 2026-10-22
 
 ### Fixed

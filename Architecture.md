@@ -37,7 +37,7 @@ The sub-package `bitVotes` implements the consensus bitVote algorithm (branch an
 
 The collector polls the C-chain indexer database and forwards what it finds to the manager over channels.
 
-- `SigningPolicyInitialized` events from the `Relay` contract, resolved across the scheduled Relay cutover by `RelaySource`, joined with `VoterRegistered` events from the voter registry.
+- `SigningPolicyInitialized` events from the `Relay` contract, joined with `VoterRegistered` events from the voter registry.
 - `AttestationRequest` events from the FDC contract.
 - bitVotes, read from `submit2` calls to the `Submission` contract after each choose phase ends.
 
