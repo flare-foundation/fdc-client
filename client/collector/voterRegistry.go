@@ -7,10 +7,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/flare-foundation/go-flare-common/pkg/contracts/relay"
 	"github.com/flare-foundation/go-flare-common/pkg/convert"
 	"github.com/flare-foundation/go-flare-common/pkg/database"
 	"github.com/flare-foundation/go-flare-common/pkg/logger"
-	"github.com/flare-foundation/go-flare-common/pkg/policy"
 	"gorm.io/gorm"
 
 	"github.com/flare-foundation/fdc-client/client/collector/registry"
@@ -78,13 +78,8 @@ func SubmitToSigningPolicyAddress(ctx context.Context, db *gorm.DB, registryCont
 	return submitToSigning, nil
 }
 
-// AddSubmitAddressesToSigningPolicy parses SigningPolicyInitialized event, assembles map from submit addresses to signingPolicy addresses, and returns them as VotersData.
-func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, signingPolicyLog database.Log) (shared.VotersData, error) {
-	data, err := policy.ParseSigningPolicyInitializedEvent(signingPolicyLog)
-	if err != nil {
-		return shared.VotersData{}, fmt.Errorf("parsing signing policy initialized event: %w", err)
-	}
-
+// AddSubmitAddressesToSigningPolicy assembles map from submit addresses to signingPolicy addresses for a SigningPolicyInitialized event, and returns them as VotersData.
+func AddSubmitAddressesToSigningPolicy(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, data *relay.RelaySigningPolicyInitialized) (shared.VotersData, error) {
 	rewardEpochID, err := convert.BigToUint64Safe(data.RewardEpochId)
 	if err != nil {
 		return shared.VotersData{}, fmt.Errorf("reward epoch %v: %w", data.RewardEpochId, err)

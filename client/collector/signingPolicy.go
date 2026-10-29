@@ -2,8 +2,9 @@ package collector
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"math"
+	"slices"
 	"time"
 
 	"github.com/flare-foundation/go-flare-common/pkg/database"
@@ -11,179 +12,122 @@ import (
 	"github.com/flare-foundation/go-flare-common/pkg/policy"
 
 	"github.com/flare-foundation/fdc-client/client/shared"
-	"github.com/flare-foundation/fdc-client/client/timing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"gorm.io/gorm"
 )
 
-// SigningPolicyInitializedListener initiates a channel that serves signingPolicyInitialized events emitted by relayContractAddress.
+// initialPolicyCount is the number of most recent signing policies served at startup.
+const initialPolicyCount = 3
+
+// SigningPolicyInitializedListener serves SigningPolicyInitialized events emitted by relayContractAddress in increasing reward epoch order.
+// It starts with the latest initialPolicyCount policies and then polls for every policy emitted after the last one served.
 func SigningPolicyInitializedListener(
 	ctx context.Context,
 	db *gorm.DB,
 	relayContractAddress common.Address,
 	registryContractAddress common.Address,
+	listenerInterval time.Duration,
 	votersDataChan chan<- []shared.VotersData,
 ) {
-	// initial query
-	params := database.LatestLogsParams{
+	initialParams := database.LatestLogsParams{
 		Address: relayContractAddress,
 		Topic0:  signingPolicyInitializedEventSel,
-		Number:  3,
+		Number:  initialPolicyCount,
 	}
 
-	logs, err := database.FetchLatestLogsByAddressAndTopic0(
-		ctx, db, params,
-	)
+	logs, err := database.FetchLatestLogsByAddressAndTopic0(ctx, db, initialParams)
 	if err != nil {
-		logger.Panicf("fetching initial logs: %v", err)
+		logger.Panicf("fetching initial signing policy logs: %v", err)
 	}
-
-	latestQuery := time.Now()
-	logger.Debugf("Logs length: %d", len(logs))
 	if len(logs) == 0 {
 		logger.Panic("No initial signing policies found")
 	}
 
-	// signingPolicyStorage expects policies in increasing order
-	sorted := make([]shared.VotersData, 0, len(logs))
+	slices.Reverse(logs) // fetched latest first
 
-	for i := range logs {
-		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[len(logs)-i-1])
-		if err != nil {
-			logger.Panicf("fetching initial signing policies with submit addresses: %v", err)
-		}
-
-		sorted = append(sorted, votersData)
-		logger.Infof("fetched initial policy for round %v", votersData.Policy.RewardEpochId)
-	}
-
-	select {
-	case votersDataChan <- sorted:
-	case <-ctx.Done():
-		logger.Infof("SigningPolicyInitializedListener exiting: %v", ctx.Err())
-	}
-
-	spiTargetedListener(ctx, db, relayContractAddress, registryContractAddress, logs[0], latestQuery, votersDataChan)
-}
-
-// spiTargetedListener that only starts aggressive queries for new signingPolicyInitialized events a bit before the expected emission and stops once it gets one and waits until the next window.
-//
-// spi = signingPolicyInitialized.
-func spiTargetedListener(
-	ctx context.Context,
-	db *gorm.DB,
-	relayContractAddress common.Address,
-	registryContractAddress common.Address,
-	lastLog database.Log,
-	latestQuery time.Time,
-	votersDataChan chan<- []shared.VotersData,
-) {
-	lastSigningPolicy, err := policy.ParseSigningPolicyInitializedEvent(lastLog)
+	votersData, err := addSubmitAddresses(ctx, db, registryContractAddress, logs)
 	if err != nil {
-		logger.Panicf("parsing initial logs: %v", err)
+		logger.Panicf("fetching initial signing policies: %v", err)
 	}
 
-	lastInitializedRewardEpochID := lastSigningPolicy.RewardEpochId.Uint64()
-
-	startOffset := int64(10) // Start collecting signing policy event 10 voting epochs before the expected start of the next reward epoch
-	if (timing.Chain.RewardEpochLength/20)+1 < 10 {
-		startOffset = int64(timing.Chain.RewardEpochLength/20) + 1 // Start 1/20 of voting epochs if 1/20 of all voting epochs in reward epoch is less than 10
+	if !sendVotersData(ctx, votersDataChan, votersData) {
+		return
 	}
 
-	for {
-		expectedSPIStart := timing.ExpectedRewardEpochStartTS(lastInitializedRewardEpochID + 1)
-		untilStart := time.Until(time.Unix(int64(expectedSPIStart)-int64(timing.Chain.CollectDurationSec)*startOffset, 0)) // head start for querying of signing policy
-		timer := time.NewTimer(untilStart)
+	// block timestamp of the last policy served, so that a policy indexed late is still found
+	lastTimestamp := logs[len(logs)-1].Timestamp
 
-		logger.Infof("next signing policy expected in %s", untilStart)
-		select {
-		case <-timer.C:
-			logger.Debug("querying for next signing policy")
-		case <-ctx.Done():
-			logger.Infof("spiTargetedListener exiting: %v", ctx.Err())
-			return
-		}
-
-		logsWithSubmitAddresses, err := queryNextSPI(ctx, db, relayContractAddress, registryContractAddress, latestQuery, lastInitializedRewardEpochID)
-		if err != nil {
-			if errors.Is(err, ctx.Err()) {
-				logger.Infof("spiTargetedListener exiting: %v", err)
-				return
-			}
-
-			logger.Errorf("querying next SPI event: %v", err)
-			continue
-		}
-		select {
-		case votersDataChan <- logsWithSubmitAddresses:
-		case <-ctx.Done():
-			logger.Infof("spiTargetedListener exiting: %v", ctx.Err())
-			return
-		}
-
-		latestQuery = time.Now()
-		lastInitializedRewardEpochID++
-	}
-}
-
-func queryNextSPI(
-	ctx context.Context,
-	db *gorm.DB,
-	relayContractAddress common.Address,
-	registryContractAddress common.Address,
-	latestQuery time.Time,
-	latestRewardEpoch uint64,
-) (
-	[]shared.VotersData,
-	error,
-) {
-	ticker := time.NewTicker(time.Duration(timing.Chain.CollectDurationSec-1) * time.Second) // ticker that is guaranteed to tick at least once per SystemVotingRound
+	ticker := time.NewTicker(listenerInterval)
 	defer ticker.Stop()
 
 	for {
-		now := time.Now()
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			logger.Infof("SigningPolicyInitializedListener exiting: %v", ctx.Err())
+			return
+		}
 
 		params := database.LogsParams{
 			Address: relayContractAddress,
 			Topic0:  signingPolicyInitializedEventSel,
-			From:    latestQuery.Unix(),
-			To:      now.Unix(),
+			From:    int64(lastTimestamp),
+			To:      math.MaxInt64,
 		}
 
-		logs, err := database.FetchLogsByAddressAndTopic0Timestamp(
-			ctx, db, params,
-		)
+		logs, err = database.FetchLogsByAddressAndTopic0Timestamp(ctx, db, params)
 		if err != nil {
-			return nil, fmt.Errorf("fetching signing policy logs: %w", err)
+			logger.Errorf("fetching signing policy logs: %v", err)
+			continue
+		}
+		if len(logs) == 0 {
+			continue
 		}
 
-		if len(logs) > 0 {
-			votersDataArray := make([]shared.VotersData, 0)
-			if len(logs) > 1 {
-				// this should never happen
-				logger.Warnf("More than one signing policy initialized event found in the same reward epoch query window (reward epoch %d)", latestRewardEpoch)
-			}
-			for i := range logs {
-				votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, logs[i])
-				if err != nil {
-					return nil, fmt.Errorf("adding submit addresses for log %d: %w", i, err)
-				}
-				if votersData.Policy.RewardEpochId.Uint64() > latestRewardEpoch {
-					votersDataArray = append(votersDataArray, votersData)
-					logger.Infof("fetched policy for round %d", votersData.Policy.RewardEpochId)
-				}
-			}
-			if len(votersDataArray) > 0 {
-				return votersDataArray, nil
-			}
+		votersData, err = addSubmitAddresses(ctx, db, registryContractAddress, logs)
+		if err != nil {
+			logger.Errorf("fetching signing policies: %v", err)
+			continue
 		}
 
-		select {
-		case <-ticker.C:
-			logger.Debug("starting next queryNextSPI iteration")
-		case <-ctx.Done():
-			return nil, ctx.Err()
+		if !sendVotersData(ctx, votersDataChan, votersData) {
+			return
 		}
+
+		lastTimestamp = logs[len(logs)-1].Timestamp
 	}
+}
+
+// sendVotersData sends votersData to votersDataChan and reports false if ctx is done first.
+func sendVotersData(ctx context.Context, votersDataChan chan<- []shared.VotersData, votersData []shared.VotersData) bool {
+	select {
+	case votersDataChan <- votersData:
+		return true
+	case <-ctx.Done():
+		logger.Infof("SigningPolicyInitializedListener exiting: %v", ctx.Err())
+		return false
+	}
+}
+
+// addSubmitAddresses parses SigningPolicyInitialized logs and adds the submit addresses of their voters.
+func addSubmitAddresses(ctx context.Context, db *gorm.DB, registryContractAddress common.Address, logs []database.Log) ([]shared.VotersData, error) {
+	votersDataArray := make([]shared.VotersData, 0, len(logs))
+
+	for _, log := range logs {
+		data, err := policy.ParseSigningPolicyInitializedEvent(log)
+		if err != nil {
+			return nil, fmt.Errorf("parsing signing policy initialized event: %w", err)
+		}
+
+		votersData, err := AddSubmitAddressesToSigningPolicy(ctx, db, registryContractAddress, data)
+		if err != nil {
+			return nil, fmt.Errorf("signing policy for reward epoch %d: %w", data.RewardEpochId, err)
+		}
+
+		votersDataArray = append(votersDataArray, votersData)
+		logger.Infof("fetched signing policy for reward epoch %d", data.RewardEpochId)
+	}
+
+	return votersDataArray, nil
 }

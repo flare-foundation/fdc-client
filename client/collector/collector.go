@@ -26,6 +26,7 @@ const (
 	minSleepTime                  = 5 * time.Second
 	requestListenerInterval       = 2 * time.Second
 	databasePollTime              = 1 * time.Second
+	signingPolicyPollInterval     = 5 * time.Second
 
 	syncRetry = 30
 )
@@ -117,7 +118,7 @@ func New(user *config.UserRaw, system *config.System, sharedDataPipes *shared.Da
 
 // Run starts SigningPolicyInitializedListener, BitVoteListener, and AttestationRequestListener in go routines.
 func (c *Collector) Run(ctx context.Context) {
-	go SigningPolicyInitializedListener(ctx, c.DB, c.RelayContractAddress, c.VoterRegistryContractAddress, c.SigningPolicies)
+	go SigningPolicyInitializedListener(ctx, c.DB, c.RelayContractAddress, c.VoterRegistryContractAddress, signingPolicyPollInterval, c.SigningPolicies)
 	go AttestationRequestListener(ctx, c.DB, c.FdcContractAddress, requestListenerInterval, c.Requests)
 
 	chooseTrigger := make(chan uint32)

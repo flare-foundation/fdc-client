@@ -7,9 +7,5 @@ voter_registry_contract = "0xB00cC45B4a7d3e1FEE684cFc4417998A1c183e6d"
 
 [timing]
 t0 = 1729652370
-t0_reward_delay = 20000
-reward_epoch_length = 5
 collect_duration_sec = 20
 choose_duration_sec = 10
-commit_duration_sec = 10
-offset_sec = 10

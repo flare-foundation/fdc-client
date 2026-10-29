@@ -6,4 +6,3 @@ voter_registry_contract = "0xd23FAE88c09e6A77dD9eFcc29D6bBC55D2e74310"
 
 [timing]
 t0 = 1658429955
-reward_epoch_length = 3360

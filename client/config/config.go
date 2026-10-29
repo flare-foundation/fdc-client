@@ -121,8 +121,6 @@ type AttestationTypesUnparsed map[string]AttestationTypeUnparsed
 // Timing holds chain timing parameters that drive round scheduling.
 type Timing struct {
 	T0                 uint64 `toml:"t0"`
-	T0RewardDelay      uint64 `toml:"t0_reward_delay"`
-	RewardEpochLength  uint64 `toml:"reward_epoch_length"`
 	CollectDurationSec uint64 `toml:"collect_duration_sec"`
 	ChooseDurationSec  uint64 `toml:"choose_duration_sec"`
 }
