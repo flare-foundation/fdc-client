@@ -55,7 +55,7 @@ func TestReadSystem(t *testing.T) {
 	sysCfg, err := config.ReadSystem(SystemDirectory, "coston", 200)
 	require.NoError(t, err)
 	require.Equal(t, common.HexToAddress("0x2cA6571Daa15ce734Bbd0Bf27D5C9D16787fc33f"), sysCfg.Addresses.SubmitContract)
-	require.Equal(t, uint64(240), sysCfg.Timing.RewardEpochLength)
+	require.Equal(t, uint64(1658429955), sysCfg.Timing.T0)
 }
 
 func TestStringToByte32(t *testing.T) {

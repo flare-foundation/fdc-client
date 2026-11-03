@@ -26,6 +26,7 @@ const (
 	minSleepTime                  = 5 * time.Second
 	requestListenerInterval       = 2 * time.Second
 	databasePollTime              = 1 * time.Second
+	signingPolicyPollInterval     = 5 * time.Second
 
 	syncRetry = 30
 )
@@ -83,7 +84,7 @@ type Collector struct {
 	ProtocolID                   uint8
 	SubmitContractAddress        common.Address
 	FdcContractAddress           common.Address
-	RelaySource                  RelaySource
+	RelayContractAddress         common.Address
 	VoterRegistryContractAddress common.Address
 
 	DB              *gorm.DB
@@ -103,7 +104,7 @@ func New(user *config.UserRaw, system *config.System, sharedDataPipes *shared.Da
 		ProtocolID:                   user.ProtocolID,
 		SubmitContractAddress:        system.Addresses.SubmitContract,
 		FdcContractAddress:           system.Addresses.FdcContract,
-		RelaySource:                  NewRelaySource(system.Addresses.RelayContract, system.RelayCutover),
+		RelayContractAddress:         system.Addresses.RelayContract,
 		VoterRegistryContractAddress: system.Addresses.VoterRegistryContract,
 
 		DB:              db,
@@ -117,7 +118,7 @@ func New(user *config.UserRaw, system *config.System, sharedDataPipes *shared.Da
 
 // Run starts SigningPolicyInitializedListener, BitVoteListener, and AttestationRequestListener in go routines.
 func (c *Collector) Run(ctx context.Context) {
-	go SigningPolicyInitializedListener(ctx, c.DB, c.RelaySource, c.VoterRegistryContractAddress, c.SigningPolicies)
+	go SigningPolicyInitializedListener(ctx, c.DB, c.RelayContractAddress, c.VoterRegistryContractAddress, signingPolicyPollInterval, c.SigningPolicies)
 	go AttestationRequestListener(ctx, c.DB, c.FdcContractAddress, requestListenerInterval, c.Requests)
 
 	chooseTrigger := make(chan uint32)

@@ -58,8 +58,3 @@ func LastCollectPhaseStart(t uint64) (uint32, uint64, error) {
 
 	return roundID, startTimestamp, nil
 }
-
-// ExpectedRewardEpochStartTS returns the expected start timestamp of the rewardEpoch with rewardEpochID.
-func ExpectedRewardEpochStartTS(rewardEpochID uint64) uint64 {
-	return Chain.T0 + Chain.T0RewardDelay + Chain.RewardEpochLength*Chain.CollectDurationSec*rewardEpochID
-}

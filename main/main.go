@@ -40,10 +40,6 @@ func main() {
 		logger.Panicf("invalid config: %s", err)
 	}
 
-	if err := systemConfig.Validate(); err != nil {
-		logger.Panicf("invalid system config: %s", err)
-	}
-
 	err = timing.Set(systemConfig.Timing)
 	if err != nil {
 		logger.Panicf("cannot set timing: %s", err)
